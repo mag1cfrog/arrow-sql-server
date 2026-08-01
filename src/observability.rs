@@ -5,23 +5,24 @@ use std::{fmt::Write as _, time::Duration};
 pub(crate) mod schema;
 pub(crate) mod writer;
 
-/// Crate-level tracing target used by `arrow-tiberius` instrumentation.
-pub(crate) const TRACE_TARGET: &str = "arrow_tiberius";
+/// Crate-level tracing target used by `arrow_sql_server` instrumentation.
+pub(crate) const TRACE_TARGET: &str = "arrow_sql_server";
 
 /// Stable phase name for Arrow-to-SQL Server schema planning telemetry.
 pub(crate) const SCHEMA_PLANNING_PHASE: &str = "schema_planning";
 
 /// Stable span name for Arrow-to-SQL Server schema planning telemetry.
-pub(crate) const SCHEMA_PLANNING_SPAN: &str = "arrow_tiberius.schema_planning";
+pub(crate) const SCHEMA_PLANNING_SPAN: &str = "arrow_sql_server.schema_planning";
 
 /// Stable event marker emitted when schema planning starts.
-pub(crate) const SCHEMA_PLANNING_STARTED_EVENT: &str = "arrow_tiberius.schema_planning.started";
+pub(crate) const SCHEMA_PLANNING_STARTED_EVENT: &str = "arrow_sql_server.schema_planning.started";
 
 /// Stable event marker emitted when schema planning completes successfully.
-pub(crate) const SCHEMA_PLANNING_COMPLETED_EVENT: &str = "arrow_tiberius.schema_planning.completed";
+pub(crate) const SCHEMA_PLANNING_COMPLETED_EVENT: &str =
+    "arrow_sql_server.schema_planning.completed";
 
 /// Stable event marker emitted when schema planning fails.
-pub(crate) const SCHEMA_PLANNING_FAILED_EVENT: &str = "arrow_tiberius.schema_planning.failed";
+pub(crate) const SCHEMA_PLANNING_FAILED_EVENT: &str = "arrow_sql_server.schema_planning.failed";
 
 /// Stable phase name for bulk writer initialization telemetry.
 pub(crate) const WRITER_INITIALIZATION_PHASE: &str = "writer_initialization";
@@ -30,31 +31,31 @@ pub(crate) const WRITER_INITIALIZATION_PHASE: &str = "writer_initialization";
 pub(crate) const TARGET_METADATA_VALIDATION_PHASE: &str = "target_metadata_validation";
 
 /// Stable span name for bulk writer initialization telemetry.
-pub(crate) const WRITER_INITIALIZATION_SPAN: &str = "arrow_tiberius.writer_initialization";
+pub(crate) const WRITER_INITIALIZATION_SPAN: &str = "arrow_sql_server.writer_initialization";
 
 /// Stable event marker emitted when writer initialization starts.
 pub(crate) const WRITER_INITIALIZATION_STARTED_EVENT: &str =
-    "arrow_tiberius.writer_initialization.started";
+    "arrow_sql_server.writer_initialization.started";
 
 /// Stable event marker emitted when writer initialization completes successfully.
 pub(crate) const WRITER_INITIALIZATION_COMPLETED_EVENT: &str =
-    "arrow_tiberius.writer_initialization.completed";
+    "arrow_sql_server.writer_initialization.completed";
 
 /// Stable event marker emitted when writer initialization fails.
 pub(crate) const WRITER_INITIALIZATION_FAILED_EVENT: &str =
-    "arrow_tiberius.writer_initialization.failed";
+    "arrow_sql_server.writer_initialization.failed";
 
 /// Stable event marker emitted when target metadata validation starts.
 pub(crate) const TARGET_METADATA_VALIDATION_STARTED_EVENT: &str =
-    "arrow_tiberius.target_metadata_validation.started";
+    "arrow_sql_server.target_metadata_validation.started";
 
 /// Stable event marker emitted when target metadata validation completes successfully.
 pub(crate) const TARGET_METADATA_VALIDATION_COMPLETED_EVENT: &str =
-    "arrow_tiberius.target_metadata_validation.completed";
+    "arrow_sql_server.target_metadata_validation.completed";
 
 /// Stable event marker emitted when target metadata validation fails.
 pub(crate) const TARGET_METADATA_VALIDATION_FAILED_EVENT: &str =
-    "arrow_tiberius.target_metadata_validation.failed";
+    "arrow_sql_server.target_metadata_validation.failed";
 
 /// Stable phase name for bulk writer batch write telemetry.
 pub(crate) const BATCH_WRITE_PHASE: &str = "batch_write";
@@ -74,29 +75,30 @@ pub(crate) const DIRECT_ENCODING_PHASE: &str = "direct_encoding";
 pub(crate) const PACKET_WRITE_PHASE: &str = "packet_write";
 
 /// Stable span name for bulk writer batch write telemetry.
-pub(crate) const BATCH_WRITE_SPAN: &str = "arrow_tiberius.batch_write";
+pub(crate) const BATCH_WRITE_SPAN: &str = "arrow_sql_server.batch_write";
 
 /// Stable event marker emitted when batch writing starts.
-pub(crate) const BATCH_WRITE_STARTED_EVENT: &str = "arrow_tiberius.batch_write.started";
+pub(crate) const BATCH_WRITE_STARTED_EVENT: &str = "arrow_sql_server.batch_write.started";
 
 /// Stable event marker emitted when batch writing completes successfully.
-pub(crate) const BATCH_WRITE_COMPLETED_EVENT: &str = "arrow_tiberius.batch_write.completed";
+pub(crate) const BATCH_WRITE_COMPLETED_EVENT: &str = "arrow_sql_server.batch_write.completed";
 
 /// Stable event marker emitted when batch writing fails.
-pub(crate) const BATCH_WRITE_FAILED_EVENT: &str = "arrow_tiberius.batch_write.failed";
+pub(crate) const BATCH_WRITE_FAILED_EVENT: &str = "arrow_sql_server.batch_write.failed";
 
 /// Stable event marker emitted when direct raw measurement completes.
-pub(crate) const DIRECT_RAW_MEASURED_EVENT: &str = "arrow_tiberius.direct_raw.measured";
+pub(crate) const DIRECT_RAW_MEASURED_EVENT: &str = "arrow_sql_server.direct_raw.measured";
 
 /// Stable event marker emitted when direct raw row ranges are planned.
-pub(crate) const DIRECT_RAW_RANGES_PLANNED_EVENT: &str = "arrow_tiberius.direct_raw.ranges_planned";
+pub(crate) const DIRECT_RAW_RANGES_PLANNED_EVENT: &str =
+    "arrow_sql_server.direct_raw.ranges_planned";
 
 /// Stable event marker emitted when a direct raw range packet write completes.
 pub(crate) const DIRECT_RAW_PACKET_WRITE_COMPLETED_EVENT: &str =
-    "arrow_tiberius.direct_raw.packet_write.completed";
+    "arrow_sql_server.direct_raw.packet_write.completed";
 
 /// Stable event marker emitted when direct raw encoding or packet writing fails.
-pub(crate) const DIRECT_RAW_FAILED_EVENT: &str = "arrow_tiberius.direct_raw.failed";
+pub(crate) const DIRECT_RAW_FAILED_EVENT: &str = "arrow_sql_server.direct_raw.failed";
 
 /// Stable phase name for bulk writer finish telemetry.
 pub(crate) const FINISH_PHASE: &str = "finish";
@@ -105,16 +107,16 @@ pub(crate) const FINISH_PHASE: &str = "finish";
 pub(crate) const FINALIZE_PHASE: &str = "finalize";
 
 /// Stable span name for bulk writer finish telemetry.
-pub(crate) const FINISH_SPAN: &str = "arrow_tiberius.finish";
+pub(crate) const FINISH_SPAN: &str = "arrow_sql_server.finish";
 
 /// Stable event marker emitted when writer finish starts.
-pub(crate) const FINISH_STARTED_EVENT: &str = "arrow_tiberius.finish.started";
+pub(crate) const FINISH_STARTED_EVENT: &str = "arrow_sql_server.finish.started";
 
 /// Stable event marker emitted when writer finish completes successfully.
-pub(crate) const FINISH_COMPLETED_EVENT: &str = "arrow_tiberius.finish.completed";
+pub(crate) const FINISH_COMPLETED_EVENT: &str = "arrow_sql_server.finish.completed";
 
 /// Stable event marker emitted when writer finish fails during finalization.
-pub(crate) const FINISH_FAILED_EVENT: &str = "arrow_tiberius.finish.failed";
+pub(crate) const FINISH_FAILED_EVENT: &str = "arrow_sql_server.finish.failed";
 
 pub(crate) fn duration_micros_u64(duration: Duration) -> u64 {
     u64::try_from(duration.as_micros()).unwrap_or(u64::MAX)
@@ -148,11 +150,11 @@ pub(crate) fn append_unique_text(target: &mut String, value: &str) {
 
 /// Test-only span name used to prove tracing capture support.
 #[cfg(test)]
-pub(crate) const TEST_CAPTURE_SPAN: &str = "arrow_tiberius.test_capture";
+pub(crate) const TEST_CAPTURE_SPAN: &str = "arrow_sql_server.test_capture";
 
 /// Test-only event message used to prove tracing capture support.
 #[cfg(test)]
-pub(crate) const TEST_CAPTURE_EVENT: &str = "arrow_tiberius.test_capture_smoke";
+pub(crate) const TEST_CAPTURE_EVENT: &str = "arrow_sql_server.test_capture_smoke";
 
 /// Emits a test-only event through the same tracing path production code uses.
 #[cfg(test)]
@@ -451,6 +453,10 @@ mod tests {
 
     #[test]
     fn scoped_capture_records_event_and_fields() -> Result<(), String> {
+        assert_eq!(TRACE_TARGET, "arrow_sql_server");
+        assert_eq!(TEST_CAPTURE_SPAN, "arrow_sql_server.test_capture");
+        assert_eq!(TEST_CAPTURE_EVENT, "arrow_sql_server.test_capture_smoke");
+
         let (_result, traces) = capture_traces(emit_test_capture_smoke_event);
         let records = traces.records()?;
 

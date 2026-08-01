@@ -30,7 +30,7 @@ use tracing_subscriber::EnvFilter;
 fn init_tracing_for_example() {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::new(
-            "info,arrow_tiberius=debug,tiberius_raw_bulk::protocol=info",
+            "info,arrow_sql_server=debug,tiberius_raw_bulk::protocol=info",
         ))
         .init();
 }
@@ -46,7 +46,7 @@ to the application, not to `arrow-tiberius`.
 All crate-owned instrumentation uses the tracing target:
 
 ```text
-arrow_tiberius
+arrow_sql_server
 ```
 
 The `tiberius-raw-bulk` dependency emits sanitized SQL Server client and TDS
@@ -80,13 +80,13 @@ dashboards, and tests, but they are not exposed as public Rust constants.
 
 | Area | Span | Events | Level |
 | --- | --- | --- | --- |
-| Schema planning | `arrow_tiberius.schema_planning` | `arrow_tiberius.schema_planning.started`, `arrow_tiberius.schema_planning.completed`, `arrow_tiberius.schema_planning.failed` | `info`, `error` |
-| Writer initialization | `arrow_tiberius.writer_initialization` | `arrow_tiberius.writer_initialization.started`, `arrow_tiberius.writer_initialization.completed`, `arrow_tiberius.writer_initialization.failed` | `info`, `error` |
-| Target metadata validation | `arrow_tiberius.writer_initialization` | `arrow_tiberius.target_metadata_validation.started`, `arrow_tiberius.target_metadata_validation.completed`, `arrow_tiberius.target_metadata_validation.failed` | `info`, `error` |
-| Batch write | `arrow_tiberius.batch_write` | `arrow_tiberius.batch_write.started`, `arrow_tiberius.batch_write.completed`, `arrow_tiberius.batch_write.failed` | `info`, `error` |
-| Direct raw encoding | `arrow_tiberius.batch_write` | `arrow_tiberius.direct_raw.measured`, `arrow_tiberius.direct_raw.ranges_planned`, `arrow_tiberius.direct_raw.failed` | `debug`, `error` |
-| Direct raw packet write | `arrow_tiberius.batch_write` | `arrow_tiberius.direct_raw.packet_write.completed`, `arrow_tiberius.direct_raw.failed` | `debug`, `error` |
-| Finish | `arrow_tiberius.finish` | `arrow_tiberius.finish.started`, `arrow_tiberius.finish.completed`, `arrow_tiberius.finish.failed` | `info`, `error` |
+| Schema planning | `arrow_sql_server.schema_planning` | `arrow_sql_server.schema_planning.started`, `arrow_sql_server.schema_planning.completed`, `arrow_sql_server.schema_planning.failed` | `info`, `error` |
+| Writer initialization | `arrow_sql_server.writer_initialization` | `arrow_sql_server.writer_initialization.started`, `arrow_sql_server.writer_initialization.completed`, `arrow_sql_server.writer_initialization.failed` | `info`, `error` |
+| Target metadata validation | `arrow_sql_server.writer_initialization` | `arrow_sql_server.target_metadata_validation.started`, `arrow_sql_server.target_metadata_validation.completed`, `arrow_sql_server.target_metadata_validation.failed` | `info`, `error` |
+| Batch write | `arrow_sql_server.batch_write` | `arrow_sql_server.batch_write.started`, `arrow_sql_server.batch_write.completed`, `arrow_sql_server.batch_write.failed` | `info`, `error` |
+| Direct raw encoding | `arrow_sql_server.batch_write` | `arrow_sql_server.direct_raw.measured`, `arrow_sql_server.direct_raw.ranges_planned`, `arrow_sql_server.direct_raw.failed` | `debug`, `error` |
+| Direct raw packet write | `arrow_sql_server.batch_write` | `arrow_sql_server.direct_raw.packet_write.completed`, `arrow_sql_server.direct_raw.failed` | `debug`, `error` |
+| Finish | `arrow_sql_server.finish` | `arrow_sql_server.finish.started`, `arrow_sql_server.finish.completed`, `arrow_sql_server.finish.failed` | `info`, `error` |
 
 Direct raw encoding and packet write events are emitted only for
 `WriteBackend::DirectRawBulk`. Baseline and framed direct writes still emit the
@@ -165,29 +165,29 @@ async {
 .await?;
 ```
 
-With a subscriber installed, the `arrow-tiberius` spans are emitted inside the
+With a subscriber installed, the `arrow_sql_server` spans are emitted inside the
 application span. This lets downstream systems group crate-owned writer details
 under the application's workflow or output context without duplicating writer
 internals.
 
 During writer operations, `tiberius-raw-bulk` protocol events are emitted under
-the active `arrow-tiberius` writer spans. A typical write trace can therefore
+the active `arrow_sql_server` writer spans. A typical write trace can therefore
 look like:
 
 ```text
 my_app.output_write
-  -> arrow_tiberius.writer_initialization
+  -> arrow_sql_server.writer_initialization
     -> protocol.connection.connect
     -> protocol.tls.negotiation
     -> protocol.login.flow
-  -> arrow_tiberius.batch_write
+  -> arrow_sql_server.batch_write
     -> protocol.bulk_load.request
     -> protocol.bulk_load.packet.written
-  -> arrow_tiberius.finish
+  -> arrow_sql_server.finish
     -> protocol.token.done
 ```
 
-Collectors should keep the targets distinct: `arrow_tiberius` describes Arrow
+Collectors should keep the targets distinct: `arrow_sql_server` describes Arrow
 schema planning and writer lifecycle semantics, while
 `tiberius_raw_bulk::protocol` describes SQL Server client and TDS protocol
 semantics.
