@@ -1,8 +1,9 @@
 # Observability
 
-This document describes the Arrow SQL Server tracing contract for applications
-that plan Arrow schemas, write Arrow `RecordBatch` values to SQL Server, or wrap
-those writes inside a higher-level workflow.
+This advanced guide describes the tracing contract for applications that plan
+Arrow schemas, write Arrow `RecordBatch` values to SQL Server, or wrap those
+writes inside a higher-level workflow. New users do not need tracing to complete
+a write; start with [Getting Started](getting-started.md).
 
 Arrow SQL Server emits spans and events through the [`tracing`] crate. It does
 not install a global subscriber, choose an output sink, configure filters, or

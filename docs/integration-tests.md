@@ -1,5 +1,8 @@
 # Integration Tests
 
+This is a maintainer guide for validating Arrow SQL Server itself. Application
+developers do not need this harness to use the crate.
+
 Default validation does not require SQL Server:
 
 ```bash
