@@ -4,7 +4,7 @@ use std::{env, error::Error, io, sync::Arc};
 
 use arrow_array::{ArrayRef, BooleanArray, Int64Array, RecordBatch, StringArray};
 use arrow_schema::{DataType, Field, Schema};
-use arrow_tiberius::{
+use arrow_sql_server::{
     BulkWriter, CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName,
     WriteBackend, WriteOptions, create_table_sql_from_mappings,
 };

@@ -19,12 +19,12 @@
 //!
 //! ```
 //! use arrow_schema::{DataType, Field, Schema};
-//! use arrow_tiberius::{
+//! use arrow_sql_server::{
 //!     CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName,
 //!     create_table_sql_from_mappings,
 //! };
 //!
-//! # fn main() -> arrow_tiberius::Result<()> {
+//! # fn main() -> arrow_sql_server::Result<()> {
 //! let schema = Schema::new(vec![
 //!     Field::new("id", DataType::Int64, false),
 //!     Field::new("name", DataType::Utf8, true),
@@ -46,13 +46,13 @@
 //! Connect through the crate-owned Tiberius compatibility boundary:
 //!
 //! ```no_run
-//! use arrow_tiberius::{
+//! use arrow_sql_server::{
 //!     ConnectedMssqlClient, connect_mssql_client_from_ado_string,
 //! };
 //!
 //! async fn connect(
 //!     connection_string: &str,
-//! ) -> arrow_tiberius::Result<ConnectedMssqlClient> {
+//! ) -> arrow_sql_server::Result<ConnectedMssqlClient> {
 //!     connect_mssql_client_from_ado_string(connection_string).await
 //! }
 //! ```

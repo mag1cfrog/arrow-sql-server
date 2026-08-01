@@ -12,7 +12,7 @@ expect_used = "deny"
 panic = "deny"
 
 [package]
-name = "arrow-tiberius"
+name = "arrow-sql-server"
 version = "0.2.1"
 edition = "2024"
 rust-version = "1.88"
@@ -46,7 +46,7 @@ include = [
 workspace = true
 
 [lib]
-name = "arrow_tiberius"
+name = "arrow_sql_server"
 path = "src/lib.rs"
 
 [features]

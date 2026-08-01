@@ -3,9 +3,9 @@
 use std::sync::Arc;
 
 use arrow_schema::{DataType, Field, Schema};
-use arrow_tiberius::{CompatibilityLevel, Error, MssqlProfile, MssqlVersion, PlanOptions};
+use arrow_sql_server::{CompatibilityLevel, Error, MssqlProfile, MssqlVersion, PlanOptions};
 
-fn main() -> arrow_tiberius::Result<()> {
+fn main() -> arrow_sql_server::Result<()> {
     let schema = Schema::new(vec![
         Field::new("external_id", DataType::UInt64, false),
         Field::new(

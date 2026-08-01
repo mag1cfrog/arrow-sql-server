@@ -1,12 +1,12 @@
 //! Plan an Arrow schema and render SQL Server `CREATE TABLE` DDL.
 
 use arrow_schema::{DataType, Field, Schema};
-use arrow_tiberius::{
+use arrow_sql_server::{
     CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName,
     create_table_sql_from_mappings,
 };
 
-fn main() -> arrow_tiberius::Result<()> {
+fn main() -> arrow_sql_server::Result<()> {
     let schema = Schema::new(vec![
         Field::new("customer_id", DataType::Int64, false),
         Field::new("display_name", DataType::Utf8, true),
