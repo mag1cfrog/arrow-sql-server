@@ -136,7 +136,7 @@ and writer finish. It never installs a subscriber.
 
 Its `tiberius-raw-bulk` dependency also emits sanitized protocol tracing under
 the `tiberius_raw_bulk::protocol` target. Those protocol events are emitted
-inside active `arrow-tiberius` writer spans during connect, bulk-load, and
+inside active `arrow_sql_server` writer spans during connect, bulk-load, and
 finish operations.
 
 See [Observability](docs/observability.md) for subscriber setup, span and event
