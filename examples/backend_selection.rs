@@ -1,6 +1,6 @@
 //! Configure writer backend selection without opening a SQL Server connection.
 
-use arrow_tiberius::{WriteBackend, WriteOptions};
+use arrow_sql_server::{WriteBackend, WriteOptions};
 
 fn main() {
     let auto = WriteOptions::default();

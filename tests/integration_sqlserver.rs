@@ -19,7 +19,7 @@ use arrow_array::{
 use arrow_buffer::{MutableBuffer, NullBuffer, OffsetBuffer, ScalarBuffer, i256};
 use arrow_data::ArrayData;
 use arrow_schema::{DataType, Field, Schema, TimeUnit};
-use arrow_tiberius::{
+use arrow_sql_server::{
     ArrowFieldRef, BulkWriter, Date64Policy, DecimalPolicy, DiagnosticCode, DiagnosticSet, Error,
     Identifier, MssqlColumn, MssqlProfile, MssqlType, MssqlTypeLength, NanosecondPolicy,
     PlanOptions, PlanOutcome, PlannedSchema, SchemaMapping, TableName, TimestampPolicy,
@@ -39,7 +39,7 @@ fn plan_arrow_schema_to_mssql_mappings(
     schema: impl AsRef<Schema>,
     profile: MssqlProfile,
     options: PlanOptions,
-) -> arrow_tiberius::Result<PlanOutcome<PlannedSchema>> {
+) -> arrow_sql_server::Result<PlanOutcome<PlannedSchema>> {
     profile.plan_arrow_schema(schema, options)
 }
 
@@ -4716,7 +4716,7 @@ fn large_binary_array_crossing_i32_offset_boundary() -> TestResult<ArrayRef> {
     Ok(Arc::new(array))
 }
 
-fn unique_table_name() -> arrow_tiberius::Result<TableName> {
+fn unique_table_name() -> arrow_sql_server::Result<TableName> {
     let counter = TABLE_COUNTER.fetch_add(1, Ordering::Relaxed);
     let table = format!("arrow_tiberius_{}_{}", std::process::id(), counter);
 

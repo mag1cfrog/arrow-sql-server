@@ -1,12 +1,12 @@
 //! Apply an explicit planning policy for a policy-dependent Arrow type.
 
 use arrow_schema::{DataType, Field, Schema};
-use arrow_tiberius::{
+use arrow_sql_server::{
     CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName, UInt64Policy,
     create_table_sql_from_mappings,
 };
 
-fn main() -> arrow_tiberius::Result<()> {
+fn main() -> arrow_sql_server::Result<()> {
     let schema = Schema::new(vec![
         Field::new("event_id", DataType::UInt64, false),
         Field::new("payload", DataType::Binary, true),

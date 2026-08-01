@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use arrow_array::{ArrayRef, Int32Array, RecordBatch, TimestampMicrosecondArray};
 use arrow_schema::{DataType, Field, Schema, TimeUnit};
-use arrow_tiberius::{
+use arrow_sql_server::{
     BulkWriter, CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName,
     TimestampPolicy, WriteBackend, WriteOptions, create_table_sql_from_mappings,
 };
@@ -283,7 +283,7 @@ async fn drop_table(client: &mut TestClient, table: &TableName) -> tiberius::Res
     .await
 }
 
-fn unique_table_name() -> arrow_tiberius::Result<TableName> {
+fn unique_table_name() -> arrow_sql_server::Result<TableName> {
     let counter = TABLE_COUNTER.fetch_add(1, Ordering::Relaxed);
     let table = format!("arrow_tiberius_compat_{}_{}", std::process::id(), counter);
 

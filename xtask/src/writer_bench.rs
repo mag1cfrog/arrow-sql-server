@@ -16,7 +16,7 @@ use arrow_array::{
     TimestampMillisecondArray, UInt8Array, UInt16Array, UInt32Array, UInt64Array,
 };
 use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
-use arrow_tiberius::{
+use arrow_sql_server::{
     BulkWriter, Date64Policy, MssqlProfile, PlanOptions, PlannedSchema, SchemaMapping, TableName,
     UInt64Policy, WriteBackend, WriteOptions, create_table_sql_from_mappings,
     write::profile::DirectWriteProfile,
@@ -1986,7 +1986,7 @@ fn arrow_odbc_create_table_sql_template(
     bulk_table_lock: bool,
 ) -> Result<String, WriterBenchError> {
     let placeholder_table =
-        TableName::new("dbo", ODBC_TABLE_PLACEHOLDER).map_err(WriterBenchError::ArrowTiberius)?;
+        TableName::new("dbo", ODBC_TABLE_PLACEHOLDER).map_err(WriterBenchError::ArrowSqlServer)?;
     let planned_schema = benchmark_mappings_for_scenario(benchmark.scenario)?;
     let sql = benchmark_table_sql(&placeholder_table, &planned_schema);
     let quoted_placeholder = placeholder_table.quoted_sql();
@@ -2468,7 +2468,7 @@ struct GeneratedBatchSummary {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct TiberiusBenchReport {
-    stats: arrow_tiberius::WriteStats,
+    stats: arrow_sql_server::WriteStats,
     validated_rows: u64,
     peak_rss_kib: Option<u64>,
     timings: TiberiusBenchTimings,
@@ -3593,7 +3593,7 @@ async fn run_tiberius_repeat_with_batches(
         },
     )
     .await
-    .map_err(WriterBenchError::ArrowTiberius)?;
+    .map_err(WriterBenchError::ArrowSqlServer)?;
     report.timings.setup += setup_start.elapsed();
 
     let profiling_direct = config.profile_direct
@@ -3603,12 +3603,12 @@ async fn run_tiberius_repeat_with_batches(
         );
     let _date_fast_path_override = config
         .disable_date_fast_path
-        .then(arrow_tiberius::write::profile::disable_direct_date_fast_path_for_scope);
+        .then(arrow_sql_server::write::profile::disable_direct_date_fast_path_for_scope);
     let _fixed_width_fast_path_override = config
         .disable_fixed_width_fast_path
-        .then(arrow_tiberius::write::profile::disable_direct_fixed_width_fast_path_for_scope);
+        .then(arrow_sql_server::write::profile::disable_direct_fixed_width_fast_path_for_scope);
     if profiling_direct {
-        arrow_tiberius::write::profile::start_direct_write_profile();
+        arrow_sql_server::write::profile::start_direct_write_profile();
     }
 
     let write_batches = async {
@@ -3618,7 +3618,7 @@ async fn run_tiberius_repeat_with_batches(
             report.stats = writer
                 .write_batch(&batch)
                 .await
-                .map_err(WriterBenchError::ArrowTiberius)?;
+                .map_err(WriterBenchError::ArrowSqlServer)?;
         }
         report.timings.write += write_start.elapsed();
         Ok(())
@@ -3641,7 +3641,7 @@ async fn run_tiberius_repeat_with_batches(
         report.stats = writer
             .finish()
             .await
-            .map_err(WriterBenchError::ArrowTiberius)?;
+            .map_err(WriterBenchError::ArrowSqlServer)?;
         report.timings.finish += finish_start.elapsed();
         Ok(())
     };
@@ -3672,7 +3672,7 @@ async fn run_tiberius_repeat_with_batches(
     }
 
     if profiling_direct {
-        report.direct_profile = arrow_tiberius::write::profile::finish_direct_write_profile();
+        report.direct_profile = arrow_sql_server::write::profile::finish_direct_write_profile();
     }
 
     Ok(report)
@@ -4050,7 +4050,7 @@ fn unique_benchmark_table_name() -> Result<TableName, WriterBenchError> {
     let counter = BENCH_TABLE_COUNTER.fetch_add(1, Ordering::Relaxed);
     let table = format!("arrow_tiberius_bench_{}_{}", std::process::id(), counter);
 
-    TableName::new("dbo", table).map_err(WriterBenchError::ArrowTiberius)
+    TableName::new("dbo", table).map_err(WriterBenchError::ArrowSqlServer)
 }
 
 fn benchmark_table_sql(table: &TableName, mappings: impl AsRef<[SchemaMapping]>) -> String {
@@ -4107,7 +4107,7 @@ fn benchmark_mappings_for_schema_with_options(
     let profile = MssqlProfile::sql_server_2017_compat_100();
     let planned_schema = profile
         .plan_arrow_schema(schema, plan_options)
-        .map_err(WriterBenchError::ArrowTiberius)?
+        .map_err(WriterBenchError::ArrowSqlServer)?
         .into_value();
 
     Ok(planned_schema)
@@ -5468,7 +5468,7 @@ pub(super) enum WriterBenchError {
     InvalidScenario(String),
     InvalidOutput(String),
     Arrow(arrow_schema::ArrowError),
-    ArrowTiberius(arrow_tiberius::Error),
+    ArrowSqlServer(arrow_sql_server::Error),
     Tiberius(tiberius::error::Error),
     SqlServer(sqlserver::SqlServerError),
     OdbcRunner(odbc_runner::OdbcRunnerError),
@@ -5498,7 +5498,9 @@ impl fmt::Display for WriterBenchError {
                 write!(f, "unknown writer-bench output `{value}`; expected human")
             }
             Self::Arrow(source) => write!(f, "failed to generate Arrow benchmark data: {source}"),
-            Self::ArrowTiberius(source) => write!(f, "arrow-tiberius benchmark failed: {source}"),
+            Self::ArrowSqlServer(source) => {
+                write!(f, "arrow-sql-server benchmark failed: {source}")
+            }
             Self::Tiberius(source) => write!(f, "SQL Server benchmark operation failed: {source}"),
             Self::SqlServer(source) => write!(f, "{source}"),
             Self::OdbcRunner(source) => write!(f, "{source}"),
@@ -5533,7 +5535,7 @@ mod tests {
         TimestampMillisecondArray, UInt8Array, UInt16Array, UInt32Array, UInt64Array,
     };
     use arrow_schema::{DataType, TimeUnit};
-    use arrow_tiberius::MssqlType;
+    use arrow_sql_server::MssqlType;
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::{ffi::OsString, time::Duration};
@@ -6982,7 +6984,7 @@ mod tests {
 
     #[test]
     fn renders_narrow_numeric_benchmark_table_ddl() {
-        let table = arrow_tiberius::TableName::new("dbo", "bench").unwrap();
+        let table = arrow_sql_server::TableName::new("dbo", "bench").unwrap();
         let schema = (super::scenario_by_name("narrow_numeric").unwrap().schema)();
         let mappings = super::benchmark_mappings_for_schema(schema).unwrap();
         let sql = super::benchmark_table_sql(&table, &mappings);
@@ -6995,7 +6997,7 @@ mod tests {
 
     #[test]
     fn renders_mixed_nullable_benchmark_table_ddl() {
-        let table = arrow_tiberius::TableName::new("dbo", "bench").unwrap();
+        let table = arrow_sql_server::TableName::new("dbo", "bench").unwrap();
         let schema = (super::scenario_by_name("mixed_nullable").unwrap().schema)();
         let mappings = super::benchmark_mappings_for_schema(schema).unwrap();
         let sql = super::benchmark_table_sql(&table, &mappings);
@@ -7008,7 +7010,7 @@ mod tests {
 
     #[test]
     fn renders_uint64_policy_benchmark_table_ddl() {
-        let table = arrow_tiberius::TableName::new("dbo", "bench").unwrap();
+        let table = arrow_sql_server::TableName::new("dbo", "bench").unwrap();
         let scenario = super::scenario_by_name("uint64_policy").unwrap();
         let mappings = super::benchmark_mappings_for_scenario(scenario).unwrap();
         let sql = super::benchmark_table_sql(&table, &mappings);
@@ -7021,7 +7023,7 @@ mod tests {
 
     #[test]
     fn renders_bulk_table_lock_sql_for_benchmark_table() {
-        let table = arrow_tiberius::TableName::new("dbo", "bench'o").unwrap();
+        let table = arrow_sql_server::TableName::new("dbo", "bench'o").unwrap();
 
         assert_eq!(
             super::benchmark_bulk_table_lock_sql(&table),

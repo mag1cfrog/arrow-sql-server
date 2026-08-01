@@ -16,7 +16,7 @@ jobs:
   release:
     name: Release-plz release
     if: >-
-      github.repository_owner == 'mag1cfrog' &&
+      github.repository == 'mag1cfrog/arrow-sql-server' &&
       (
         github.event_name == 'workflow_dispatch' ||
         (
@@ -81,7 +81,7 @@ jobs:
     name: Release-plz PR
     if: >-
       github.event_name == 'push' &&
-      github.repository_owner == 'mag1cfrog' &&
+      github.repository == 'mag1cfrog/arrow-sql-server' &&
       !contains(github.event.head_commit.message, 'chore: release v') &&
       !contains(github.event.head_commit.message, 'release-plz-')
     runs-on: ubuntu-latest
