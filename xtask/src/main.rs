@@ -1,4 +1,4 @@
-//! Repository maintenance tasks for `arrow-tiberius`.
+//! Repository maintenance tasks for Arrow SQL Server.
 
 use std::env;
 use std::ffi::OsString;

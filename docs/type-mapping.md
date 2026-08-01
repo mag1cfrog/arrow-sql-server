@@ -1,7 +1,7 @@
 # Arrow to SQL Server Type Mapping
 
 This page documents the current Arrow-to-SQL Server planning surface for
-`arrow-tiberius`.
+Arrow SQL Server.
 
 The direct raw writer is the primary optimized writer. The baseline writer is
 still supported as a compatibility and reference path. The tables below show

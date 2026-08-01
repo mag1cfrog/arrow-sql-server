@@ -1,11 +1,11 @@
-# arrow-tiberius
+# Arrow SQL Server
 
-[![Crates.io](https://img.shields.io/crates/v/arrow-tiberius.svg)](https://crates.io/crates/arrow-tiberius)
-[![Docs.rs](https://docs.rs/arrow-tiberius/badge.svg)](https://docs.rs/arrow-tiberius)
+[![Crates.io](https://img.shields.io/crates/v/arrow-sql-server.svg)](https://crates.io/crates/arrow-sql-server)
+[![Docs.rs](https://docs.rs/arrow-sql-server/badge.svg)](https://docs.rs/arrow-sql-server)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-`arrow-tiberius` bridges Apache Arrow and Microsoft SQL Server through the
-Tiberius TDS driver.
+Arrow SQL Server is a high-performance Apache Arrow `RecordBatch` bulk writer
+for Microsoft SQL Server, built on the Tiberius TDS driver.
 
 The current API focuses on Arrow-to-SQL Server writes:
 
@@ -21,7 +21,7 @@ SQL Server-to-Arrow reads are reserved for a later release.
 
 ```toml
 [dependencies]
-arrow-tiberius = "0.2"
+arrow-sql-server = "0.3"
 ```
 
 ## Quick Start
@@ -30,12 +30,12 @@ Plan an Arrow schema and render SQL Server DDL:
 
 ```rust
 use arrow_schema::{DataType, Field, Schema};
-use arrow_tiberius::{
+use arrow_sql_server::{
     CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName,
     create_table_sql_from_mappings,
 };
 
-fn main() -> arrow_tiberius::Result<()> {
+fn main() -> arrow_sql_server::Result<()> {
     let schema = Schema::new(vec![
         Field::new("id", DataType::Int64, false),
         Field::new("name", DataType::Utf8, true),
@@ -59,7 +59,7 @@ Write a batch to an existing SQL Server table:
 
 ```rust
 use arrow_array::RecordBatch;
-use arrow_tiberius::{
+use arrow_sql_server::{
     CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName,
     WriteBackend, WriteOptions, connect_mssql_client_from_ado_string,
 };
@@ -67,7 +67,7 @@ use arrow_tiberius::{
 async fn write_batch(
     connection_string: &str,
     batch: &RecordBatch,
-) -> arrow_tiberius::Result<()> {
+) -> arrow_sql_server::Result<()> {
     let mut client = connect_mssql_client_from_ado_string(connection_string).await?;
     let profile = MssqlProfile::new(
         MssqlVersion::SqlServer2022,
@@ -130,7 +130,7 @@ parity tests.
 
 ## Observability
 
-`arrow-tiberius` emits structured spans and events through `tracing` for schema
+Arrow SQL Server emits structured spans and events through `tracing` for schema
 planning, writer initialization, batch writes, direct raw backend summaries,
 and writer finish. It never installs a subscriber.
 
@@ -169,7 +169,7 @@ Choose the `MssqlProfile` that matches the SQL Server version and database
 compatibility level you plan to write against:
 
 ```rust
-use arrow_tiberius::{CompatibilityLevel, MssqlProfile, MssqlVersion};
+use arrow_sql_server::{CompatibilityLevel, MssqlProfile, MssqlVersion};
 
 let profile = MssqlProfile::new(
     MssqlVersion::SqlServer2022,
@@ -183,7 +183,7 @@ version/compatibility-level pairs. Legacy convenience constructors such as
 `MssqlProfile::sql_server_2017_compat_100()` remain available for callers that
 target those exact environments.
 
-`arrow-tiberius` depends on the published `tiberius-raw-bulk` package as the
+Arrow SQL Server depends on the published `tiberius-raw-bulk` package as the
 crate name `tiberius` and owns that compatibility boundary internally:
 
 ```toml
@@ -194,7 +194,7 @@ tiberius = { package = "tiberius-raw-bulk", version = "=0.12.3-raw-bulk.15", def
 ] }
 ```
 
-Downstream crates should normally depend only on `arrow-tiberius` and construct
+Downstream crates should normally depend only on `arrow-sql-server` and construct
 SQL Server clients through `connect_mssql_client_from_ado_string` or
 `ConnectedMssqlClient`.
 

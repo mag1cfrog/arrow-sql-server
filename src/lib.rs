@@ -1,6 +1,6 @@
-//! Apache Arrow and SQL Server bridge through Tiberius.
+//! High-performance Apache Arrow `RecordBatch` bulk writer for Microsoft SQL Server.
 //!
-//! `arrow-tiberius` bridges Apache Arrow and Microsoft SQL Server through the
+//! Arrow SQL Server bridges Apache Arrow and Microsoft SQL Server through the
 //! Tiberius TDS driver. The crate is designed around a bidirectional boundary:
 //! Arrow schemas and [`RecordBatch`] values can be planned and written to SQL
 //! Server, and future read-side APIs can map SQL Server metadata and rows back
@@ -100,7 +100,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! arrow-tiberius = "0.2"
+//! arrow-sql-server = "0.3"
 //! ```
 //!
 //! Depending on upstream `tiberius` separately creates a distinct crate type and
@@ -118,10 +118,10 @@
 //!
 //! # More Documentation
 //!
-//! - [Arrow to SQL Server Type Mapping](https://github.com/mag1cfrog/arrow-tiberius/blob/main/docs/type-mapping.md)
-//! - [Observability](https://github.com/mag1cfrog/arrow-tiberius/blob/main/docs/observability.md)
-//! - [Integration Tests](https://github.com/mag1cfrog/arrow-tiberius/blob/main/docs/integration-tests.md)
-//! - [Writer Benchmarks](https://github.com/mag1cfrog/arrow-tiberius/blob/main/docs/benchmarks.md)
+//! - [Arrow to SQL Server Type Mapping](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/type-mapping.md)
+//! - [Observability](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/observability.md)
+//! - [Integration Tests](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/integration-tests.md)
+//! - [Writer Benchmarks](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/benchmarks.md)
 
 /// Arrow-side schema metadata.
 pub mod arrow;
@@ -131,7 +131,7 @@ pub mod connection;
 pub(crate) mod conversion;
 /// Structured diagnostics for planning and writing.
 pub mod diagnostic;
-/// Error types for `arrow-tiberius`.
+/// Error types for Arrow SQL Server.
 pub mod error;
 /// MSSQL-side schema metadata, identifiers, profile, and DDL helpers.
 pub mod mssql;

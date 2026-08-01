@@ -1,4 +1,4 @@
-//! Error types for `arrow-tiberius`.
+//! Error types for Arrow SQL Server.
 
 use std::fmt::{self, Write as _};
 
@@ -109,7 +109,7 @@ impl<'a> ErrorInfo<'a> {
     }
 }
 
-/// Error type for `arrow-tiberius` operations.
+/// Error type for Arrow SQL Server operations.
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
 pub enum Error {
