@@ -11,14 +11,14 @@ use arrow_sql_server::{
 use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
-const URL_ENV: &str = "ARROW_TIBERIUS_EXAMPLE_MSSQL_URL";
-const SCHEMA_ENV: &str = "ARROW_TIBERIUS_EXAMPLE_MSSQL_SCHEMA";
-const TABLE_ENV: &str = "ARROW_TIBERIUS_EXAMPLE_MSSQL_TABLE";
-const KEEP_TABLE_ENV: &str = "ARROW_TIBERIUS_EXAMPLE_KEEP_TABLE";
-const EXISTING_TABLE_ENV: &str = "ARROW_TIBERIUS_EXAMPLE_EXISTING_TABLE";
+const URL_ENV: &str = "ARROW_SQL_SERVER_EXAMPLE_MSSQL_URL";
+const SCHEMA_ENV: &str = "ARROW_SQL_SERVER_EXAMPLE_MSSQL_SCHEMA";
+const TABLE_ENV: &str = "ARROW_SQL_SERVER_EXAMPLE_MSSQL_TABLE";
+const KEEP_TABLE_ENV: &str = "ARROW_SQL_SERVER_EXAMPLE_KEEP_TABLE";
+const EXISTING_TABLE_ENV: &str = "ARROW_SQL_SERVER_EXAMPLE_EXISTING_TABLE";
 
 const DEFAULT_SCHEMA: &str = "dbo";
-const DEFAULT_TABLE: &str = "arrow_tiberius_example_write";
+const DEFAULT_TABLE: &str = "arrow_sql_server_example_write";
 const EXPECTED_ROWS: u64 = 5;
 const EXPECTED_BATCHES: u64 = 2;
 

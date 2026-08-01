@@ -232,7 +232,7 @@ struct SqlServerCompatProbeOptions {
 impl Default for SqlServerCompatProbeOptions {
     fn default() -> Self {
         let mut connection = sqlserver::SqlServerConnectionOptions::integration_default();
-        connection.database = "arrow_tiberius_compat_probe".to_owned();
+        connection.database = "arrow_sql_server_compat_probe".to_owned();
 
         Self {
             connection,
@@ -467,7 +467,7 @@ mod tests {
     fn sqlserver_compat_probe_uses_separate_database_by_default() {
         let options = SqlServerCompatProbeOptions::default();
 
-        assert_eq!(options.connection.database, "arrow_tiberius_compat_probe");
+        assert_eq!(options.connection.database, "arrow_sql_server_compat_probe");
         assert_eq!(options.server_version, "2017");
         assert_eq!(options.compatibility_level, 100);
     }

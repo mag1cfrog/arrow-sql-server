@@ -2,7 +2,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-pub(crate) const DEFAULT_RUNNER_IMAGE_TAG: &str = "arrow-tiberius-odbc-runner:local";
+pub(crate) const DEFAULT_RUNNER_IMAGE_TAG: &str = "arrow-sql-server-odbc-runner:local";
 const RUNNER_DOCKERFILE: &str = "xtask/containers/odbc-runner/Dockerfile";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,7 +39,7 @@ impl RunnerCommandOptions {
             "run".to_owned(),
             "--rm".to_owned(),
             "--label".to_owned(),
-            "org.arrow-tiberius.xtask=odbc-runner".to_owned(),
+            "org.arrow-sql-server.xtask=odbc-runner".to_owned(),
         ];
 
         if let Some(network) = &self.network {
@@ -277,16 +277,16 @@ mod tests {
         let options = RunnerImageOptions {
             container_runtime: "podman".into(),
             image_tag: DEFAULT_RUNNER_IMAGE_TAG.to_owned(),
-            manifest_dir: "/workspace/arrow-tiberius".into(),
+            manifest_dir: "/workspace/arrow-sql-server".into(),
         };
 
         assert_eq!(
             options.dockerfile(),
-            std::path::PathBuf::from("/workspace/arrow-tiberius").join(RUNNER_DOCKERFILE)
+            std::path::PathBuf::from("/workspace/arrow-sql-server").join(RUNNER_DOCKERFILE)
         );
         assert_eq!(
             options.build_context(),
-            std::path::Path::new("/workspace/arrow-tiberius")
+            std::path::Path::new("/workspace/arrow-sql-server")
         );
     }
 
@@ -308,7 +308,7 @@ mod tests {
                 "run",
                 "--rm",
                 "--label",
-                "org.arrow-tiberius.xtask=odbc-runner",
+                "org.arrow-sql-server.xtask=odbc-runner",
                 DEFAULT_RUNNER_IMAGE_TAG,
                 "odbcinst",
                 "-q",
@@ -335,7 +335,7 @@ mod tests {
                 "run",
                 "--rm",
                 "--label",
-                "org.arrow-tiberius.xtask=odbc-runner",
+                "org.arrow-sql-server.xtask=odbc-runner",
                 "--network",
                 "bench-network",
                 DEFAULT_RUNNER_IMAGE_TAG,
@@ -353,15 +353,15 @@ mod tests {
             network: None,
             env: vec![
                 (
-                    "ARROW_TIBERIUS_BENCH_DATABASE".to_owned(),
+                    "ARROW_SQL_SERVER_BENCH_DATABASE".to_owned(),
                     "bench".to_owned(),
                 ),
                 (
-                    "ARROW_TIBERIUS_BENCH_CONNECTION_STRING".to_owned(),
+                    "ARROW_SQL_SERVER_BENCH_CONNECTION_STRING".to_owned(),
                     "server=tcp:sqlserver,1433".to_owned(),
                 ),
             ],
-            workspace: Some("/home/hanbo/repo/arrow-tiberius".into()),
+            workspace: Some("/home/hanbo/repo/arrow-sql-server".into()),
             workdir: Some("/workspace".to_owned()),
             args: vec!["cargo".to_owned(), "metadata".to_owned()],
         };
@@ -372,13 +372,13 @@ mod tests {
                 "run",
                 "--rm",
                 "--label",
-                "org.arrow-tiberius.xtask=odbc-runner",
+                "org.arrow-sql-server.xtask=odbc-runner",
                 "--env",
-                "ARROW_TIBERIUS_BENCH_DATABASE=bench",
+                "ARROW_SQL_SERVER_BENCH_DATABASE=bench",
                 "--env",
-                "ARROW_TIBERIUS_BENCH_CONNECTION_STRING=server=tcp:sqlserver,1433",
+                "ARROW_SQL_SERVER_BENCH_CONNECTION_STRING=server=tcp:sqlserver,1433",
                 "--volume",
-                "/home/hanbo/repo/arrow-tiberius:/workspace:Z",
+                "/home/hanbo/repo/arrow-sql-server:/workspace:Z",
                 "--workdir",
                 "/workspace",
                 DEFAULT_RUNNER_IMAGE_TAG,

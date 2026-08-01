@@ -156,12 +156,12 @@ cargo run --example policy_dependent_planning
 SQL Server write example:
 
 ```bash
-ARROW_TIBERIUS_EXAMPLE_MSSQL_URL='server=tcp:localhost,1433;user=sa;password=...;TrustServerCertificate=true' \
+ARROW_SQL_SERVER_EXAMPLE_MSSQL_URL='server=tcp:localhost,1433;user=sa;password=...;TrustServerCertificate=true' \
   cargo run --example sqlserver_batch_write
 ```
 
 By default, the SQL Server example creates, writes to, and drops
-`[dbo].[arrow_tiberius_example_write]`.
+`[dbo].[arrow_sql_server_example_write]`.
 
 ## Compatibility
 

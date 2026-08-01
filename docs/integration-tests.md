@@ -32,7 +32,7 @@ Plain `cargo test` must remain independent of SQL Server.
 The runner supports Docker-compatible runtimes such as Docker and Podman. Runtime selection uses:
 
 1. `--container-runtime`
-2. `ARROW_TIBERIUS_CONTAINER_RUNTIME`
+2. `ARROW_SQL_SERVER_CONTAINER_RUNTIME`
 3. `docker` on `PATH`
 4. `podman` on `PATH`
 
@@ -40,7 +40,7 @@ Examples:
 
 ```bash
 cargo xtask sqlserver-test --container-runtime podman
-ARROW_TIBERIUS_CONTAINER_RUNTIME=podman cargo xtask sqlserver-test
+ARROW_SQL_SERVER_CONTAINER_RUNTIME=podman cargo xtask sqlserver-test
 ```
 
 Shell aliases such as `alias docker=podman` are not used by the Rust process. Use the flag or environment variable when you need a specific runtime.
@@ -56,13 +56,13 @@ mcr.microsoft.com/mssql/server:2017-latest
 The default database is:
 
 ```text
-arrow_tiberius_integration
+arrow_sql_server_integration
 ```
 
 SQL Server is configured with:
 
 ```sql
-ALTER DATABASE [arrow_tiberius_integration] SET COMPATIBILITY_LEVEL = 100;
+ALTER DATABASE [arrow_sql_server_integration] SET COMPATIBILITY_LEVEL = 100;
 ```
 
 This gives local coverage for SQL Server 2017 running at database compatibility
@@ -91,16 +91,16 @@ To use an existing SQL Server instead of a local container:
 ```bash
 cargo xtask sqlserver-test \
   --connection-string 'server=tcp:127.0.0.1,1433;user id=sa;password=...;TrustServerCertificate=true' \
-  --database arrow_tiberius_integration
+  --database arrow_sql_server_integration
 ```
 
 The xtask runner passes these environment variables to the feature-gated integration tests:
 
 ```text
-ARROW_TIBERIUS_TEST_MSSQL_URL
-ARROW_TIBERIUS_TEST_MSSQL_DATABASE
-ARROW_TIBERIUS_TEST_MSSQL_COMPATIBILITY_LEVEL
-ARROW_TIBERIUS_TEST_MSSQL_VERSION
+ARROW_SQL_SERVER_TEST_MSSQL_URL
+ARROW_SQL_SERVER_TEST_MSSQL_DATABASE
+ARROW_SQL_SERVER_TEST_MSSQL_COMPATIBILITY_LEVEL
+ARROW_SQL_SERVER_TEST_MSSQL_VERSION
 ```
 
 The lower-level command is only for CI/debugging when SQL Server is already configured and those environment variables are set:
