@@ -5,11 +5,9 @@ use std::{env, error::Error, io, sync::Arc};
 use arrow_array::{ArrayRef, BooleanArray, Int64Array, RecordBatch, StringArray};
 use arrow_schema::{DataType, Field, Schema};
 use arrow_sql_server::{
-    BulkWriter, CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName,
-    WriteBackend, WriteOptions, create_table_sql_from_mappings,
+    CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName, WriteOptions,
+    connect_mssql_client_from_ado_string, create_table_sql_from_mappings,
 };
-use tokio::net::TcpStream;
-use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
 const URL_ENV: &str = "ARROW_SQL_SERVER_EXAMPLE_MSSQL_URL";
 const SCHEMA_ENV: &str = "ARROW_SQL_SERVER_EXAMPLE_MSSQL_SCHEMA";
@@ -22,7 +20,6 @@ const DEFAULT_TABLE: &str = "arrow_sql_server_example_write";
 const EXPECTED_ROWS: u64 = 5;
 const EXPECTED_BATCHES: u64 = 2;
 
-type ExampleClient = tiberius::Client<Compat<TcpStream>>;
 type ExampleResult<T> = Result<T, Box<dyn Error>>;
 
 #[tokio::main(flavor = "current_thread")]
@@ -45,30 +42,24 @@ async fn main() -> ExampleResult<()> {
         .into_value();
     let create_table_sql = create_table_sql_from_mappings(&config.table, &planned_schema);
 
-    let mut client = connect(&connection_string).await?;
+    let mut client = connect_mssql_client_from_ado_string(&connection_string).await?;
 
     if config.create_disposable_table {
-        execute_sql(
-            &mut client,
-            format!("DROP TABLE IF EXISTS {}", config.table.quoted_sql()),
-        )
-        .await?;
-        execute_sql(&mut client, create_table_sql).await?;
+        let drop_table_sql = format!("DROP TABLE IF EXISTS {}", config.table.quoted_sql());
+        client.execute_statement(&drop_table_sql).await?;
+        client.execute_statement(&create_table_sql).await?;
         println!("created disposable table {}", config.table.quoted_sql());
     } else {
         println!("using existing table {}", config.table.quoted_sql());
     }
 
-    let mut writer = BulkWriter::new(
-        &mut client,
-        config.table.clone(),
-        planned_schema,
-        WriteOptions {
-            backend: WriteBackend::DirectRawBulk,
-            ..WriteOptions::default()
-        },
-    )
-    .await?;
+    let mut writer = client
+        .bulk_writer(
+            config.table.clone(),
+            planned_schema,
+            WriteOptions::default(),
+        )
+        .await?;
 
     let first_stats = writer.write_batch(&batches[0]).await?;
     ensure_eq(first_stats.rows_written, 2, "rows after first batch")?;
@@ -95,18 +86,13 @@ async fn main() -> ExampleResult<()> {
     )?;
 
     println!(
-        "wrote {} rows across {} batches with {:?}",
-        final_stats.rows_written,
-        final_stats.batches_written,
-        WriteBackend::DirectRawBulk
+        "wrote {} rows across {} batches",
+        final_stats.rows_written, final_stats.batches_written
     );
 
     if config.create_disposable_table && !config.keep_table {
-        execute_sql(
-            &mut client,
-            format!("DROP TABLE IF EXISTS {}", config.table.quoted_sql()),
-        )
-        .await?;
+        let drop_table_sql = format!("DROP TABLE IF EXISTS {}", config.table.quoted_sql());
+        client.execute_statement(&drop_table_sql).await?;
         println!("dropped disposable table {}", config.table.quoted_sql());
     } else if config.keep_table {
         println!("kept table {}", config.table.quoted_sql());
@@ -135,19 +121,6 @@ impl ExampleConfig {
             create_disposable_table: !use_existing_table,
         })
     }
-}
-
-async fn connect(connection_string: &str) -> tiberius::Result<ExampleClient> {
-    let config = tiberius::Config::from_ado_string(connection_string)?;
-    let tcp = TcpStream::connect(config.get_addr()).await?;
-
-    tiberius::Client::connect(config, tcp.compat_write()).await
-}
-
-async fn execute_sql(client: &mut ExampleClient, sql: String) -> tiberius::Result<()> {
-    client.simple_query(sql).await?.into_results().await?;
-
-    Ok(())
 }
 
 fn example_schema() -> Arc<Schema> {

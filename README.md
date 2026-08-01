@@ -1,74 +1,78 @@
-# Arrow SQL Server
+<h1 align="center">Arrow SQL Server</h1>
 
-[![Crates.io](https://img.shields.io/crates/v/arrow-sql-server.svg)](https://crates.io/crates/arrow-sql-server)
-[![Docs.rs](https://docs.rs/arrow-sql-server/badge.svg)](https://docs.rs/arrow-sql-server)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://crates.io/crates/arrow-sql-server"><img alt="Crates.io" src="https://img.shields.io/crates/v/arrow-sql-server.svg"></a>
+  <a href="https://docs.rs/arrow-sql-server"><img alt="Docs.rs" src="https://docs.rs/arrow-sql-server/badge.svg"></a>
+  <a href="LICENSE"><img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg"></a>
+</p>
 
-Arrow SQL Server is a high-performance Apache Arrow `RecordBatch` bulk writer
-for Microsoft SQL Server, built on the Tiberius TDS driver.
+<p align="center">
+  <strong>Bulk-write Apache Arrow RecordBatch values to Microsoft SQL Server without an ODBC driver.</strong>
+</p>
 
-The current API focuses on Arrow-to-SQL Server writes:
+<h2 align="center">
+  Up to 4x faster than Arrow ODBC.<br>
+  Uses 92% less memory.
+</h2>
 
-- plan SQL Server-compatible schemas from Arrow schemas,
-- render deterministic `CREATE TABLE` SQL,
-- report unsupported mappings as structured diagnostics,
-- write Arrow `RecordBatch` values with a selectable SQL Server bulk writer,
-- emit sanitized writer and protocol tracing through `tracing`.
+<p align="center">
+  Measured up to 3.9x the throughput of Arrow ODBC.<br>
+  A fresh 0.3.0 run measured 2.67x the throughput and 17 MiB versus 213 MiB peak memory.<br>
+  <a href="docs/performance.md">See the results, limitations, and reproduction command.</a>
+</p>
 
-SQL Server-to-Arrow reads are reserved for a later release.
+Arrow SQL Server is a Rust library for schema-aware, asynchronous SQL Server
+bulk loading. It plans Arrow schemas, generates SQL Server DDL, validates target
+tables, and writes batches through a direct Arrow-to-TDS path.
+
+## Why Arrow SQL Server?
+
+- **Built for Arrow:** write `RecordBatch` values directly instead of converting
+  them into application row objects.
+- **Built for SQL Server:** explicit type planning, compatibility profiles,
+  quoted identifiers, target-table validation, and bulk-load diagnostics.
+- **No ODBC runtime:** the production path uses TDS through Tiberius, so your
+  application does not need unixODBC or a Microsoft ODBC driver.
+
+## Is It a Good Fit?
+
+| Use Arrow SQL Server when you need | This crate does not provide |
+| --- | --- |
+| Arrow-to-SQL Server bulk writes from Rust | SQL Server-to-Arrow reads |
+| Streaming writes across one or more batches | Connection pooling, retries, or job orchestration |
+| SQL Server-aware schema planning and DDL | A database-agnostic writer abstraction |
+| A direct TDS path without an ODBC deployment | Migrations, an ORM, or automatic table publishing workflows |
+
+The crate can generate `CREATE TABLE` SQL, but it does not create or replace a
+table unless your application explicitly executes that SQL.
 
 ## Install
 
-```toml
-[dependencies]
-arrow-sql-server = "0.3"
+Arrow SQL Server 0.3 uses Arrow 58 types. Add the crates used by the examples:
+
+```bash
+cargo add arrow-sql-server@0.3 arrow-array@58 arrow-schema@58
+cargo add tokio@1 --features macros,rt
 ```
 
-## Quick Start
+The minimum supported Rust version is 1.88.
 
-Plan an Arrow schema and render SQL Server DDL:
+## Write a Batch
 
-```rust
-use arrow_schema::{DataType, Field, Schema};
-use arrow_sql_server::{
-    CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName,
-    create_table_sql_from_mappings,
-};
-
-fn main() -> arrow_sql_server::Result<()> {
-    let schema = Schema::new(vec![
-        Field::new("id", DataType::Int64, false),
-        Field::new("name", DataType::Utf8, true),
-    ]);
-
-    let profile = MssqlProfile::new(
-        MssqlVersion::SqlServer2022,
-        CompatibilityLevel::SQL_SERVER_2022,
-    )?;
-    let outcome = profile.plan_arrow_schema(&schema, PlanOptions::default())?;
-
-    let table = TableName::new("dbo", "people")?;
-    let ddl = create_table_sql_from_mappings(&table, outcome.mappings());
-
-    assert!(ddl.contains("CREATE TABLE [dbo].[people]"));
-    Ok(())
-}
-```
-
-Write a batch to an existing SQL Server table:
+The target table must already match the planned schema. New applications should
+use `WriteOptions::default()`; its `Auto` backend selects the optimized writer.
 
 ```rust
 use arrow_array::RecordBatch;
 use arrow_sql_server::{
     CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName,
-    WriteBackend, WriteOptions, connect_mssql_client_from_ado_string,
+    WriteOptions, WriteStats, connect_mssql_client_from_ado_string,
 };
 
 async fn write_batch(
     connection_string: &str,
     batch: &RecordBatch,
-) -> arrow_sql_server::Result<()> {
-    let mut client = connect_mssql_client_from_ado_string(connection_string).await?;
+) -> arrow_sql_server::Result<WriteStats> {
     let profile = MssqlProfile::new(
         MssqlVersion::SqlServer2022,
         CompatibilityLevel::SQL_SERVER_2022,
@@ -78,151 +82,51 @@ async fn write_batch(
         .into_value();
 
     let table = TableName::new("dbo", "people")?;
+    let mut client = connect_mssql_client_from_ado_string(connection_string).await?;
     let mut writer = client
-        .bulk_writer(
-            table,
-            planned_schema,
-            WriteOptions {
-                backend: WriteBackend::DirectRawBulk,
-                ..WriteOptions::default()
-            },
-        )
+        .bulk_writer(table, planned_schema, WriteOptions::default())
         .await?;
 
     writer.write_batch(batch).await?;
-    writer.finish().await?;
-    Ok(())
+    writer.finish().await
 }
 ```
 
-The connected writer validates target table metadata before sending rows. It
-does not create the target table automatically; callers can use the DDL helper
-when they want this crate to produce the table definition.
+For a complete first run that creates a table, writes a batch, and verifies the
+row count, follow [Getting Started](docs/getting-started.md).
 
-## Diagnostics
+## Supported Data
 
-Planning and write failures return structured diagnostics instead of requiring
-string parsing. Diagnostics include severity, machine-readable code, field
-context, row context when available, and message text.
+The default planner and both production writers support common Arrow scalar
+types, including:
 
-For user-facing write failure reports, use `Error::safe_error_info()`. It
-exposes the write phase, inner error kind, sanitized summary, diagnostic codes,
-and structured diagnostics when available while keeping dependency source text
-out of default reports.
+- booleans and signed or unsigned integers,
+- floating-point values,
+- UTF-8 and binary arrays, including Arrow view arrays,
+- decimal values up to SQL Server precision 38,
+- dates, times, timestamps, and timezone-aware timestamps.
 
-For the complete planning surface, see
-[Arrow to SQL Server Type Mapping](docs/type-mapping.md).
+Nested Arrow values and SQL Server-to-Arrow reads are not currently supported.
+See the [complete type-mapping reference](docs/type-mapping.md) for policies,
+runtime checks, and unsupported types.
 
-## Writer Backends
+SQL Server profiles cover SQL Server 2016, 2017, 2019, 2022, and 2025 with
+compatibility-level validation.
 
-`WriteBackend` controls how planned Arrow rows are sent to SQL Server:
+## Learn More
 
-| Backend | Purpose |
-| --- | --- |
-| `Auto` | Default selection. Currently resolves to `DirectRawBulk`. |
-| `BaselineTokenRow` | Compatibility path using Tiberius `TokenRow` bulk load. |
-| `DirectFramedBulk` | Direct Arrow-to-TDS row encoding through Tiberius framed writes. |
-| `DirectRawBulk` | Optimized direct encoder plus raw bulk packet writes from the Tiberius fork. |
+Start here:
 
-The direct raw backend is the optimized production path for currently supported
-mappings. The baseline backend remains useful for compatibility checks and
-parity tests.
+- [Getting Started](docs/getting-started.md): complete your first SQL Server
+  write.
+- [Type Mapping Reference](docs/type-mapping.md): check supported Arrow and SQL
+  Server types.
+- [Performance](docs/performance.md): understand the benchmark claim and its
+  workload boundaries.
+- [API Documentation](https://docs.rs/arrow-sql-server): browse public Rust
+  types and methods.
 
-## Observability
+Advanced and maintainer documentation:
 
-Arrow SQL Server emits structured spans and events through `tracing` for schema
-planning, writer initialization, batch writes, direct raw backend summaries,
-and writer finish. It never installs a subscriber.
-
-Its `tiberius-raw-bulk` dependency also emits sanitized protocol tracing under
-the `tiberius_raw_bulk::protocol` target. Those protocol events are emitted
-inside active `arrow_sql_server` writer spans during connect, bulk-load, and
-finish operations.
-
-See [Observability](docs/observability.md) for subscriber setup, span and event
-names, safe field categories, redaction guarantees, and workflow integration.
-
-## Examples
-
-Compile-checked examples that do not require SQL Server:
-
-```bash
-cargo run --example schema_to_ddl
-cargo run --example planning_diagnostics
-cargo run --example backend_selection
-cargo run --example policy_dependent_planning
-```
-
-SQL Server write example:
-
-```bash
-ARROW_SQL_SERVER_EXAMPLE_MSSQL_URL='server=tcp:localhost,1433;user=sa;password=...;TrustServerCertificate=true' \
-  cargo run --example sqlserver_batch_write
-```
-
-By default, the SQL Server example creates, writes to, and drops
-`[dbo].[arrow_sql_server_example_write]`.
-
-## Compatibility
-
-Choose the `MssqlProfile` that matches the SQL Server version and database
-compatibility level you plan to write against:
-
-```rust
-use arrow_sql_server::{CompatibilityLevel, MssqlProfile, MssqlVersion};
-
-let profile = MssqlProfile::new(
-    MssqlVersion::SqlServer2022,
-    CompatibilityLevel::SQL_SERVER_2022,
-)?;
-```
-
-The profile surface models SQL Server 2016, 2017, 2019, 2022, and 2025
-version/compatibility-level pairs. Legacy convenience constructors such as
-`MssqlProfile::sql_server_2016_compat_100()` and
-`MssqlProfile::sql_server_2017_compat_100()` remain available for callers that
-target those exact environments.
-
-Arrow SQL Server depends on the published `tiberius-raw-bulk` package as the
-crate name `tiberius` and owns that compatibility boundary internally:
-
-```toml
-tiberius = { package = "tiberius-raw-bulk", version = "=0.12.3-raw-bulk.15", default-features = false, features = [
-    "tds73",
-    "winauth",
-    "native-tls",
-] }
-```
-
-Downstream crates should normally depend only on `arrow-sql-server` and construct
-SQL Server clients through `connect_mssql_client_from_ado_string` or
-`ConnectedMssqlClient`.
-
-## Feature Flags
-
-| Feature | Default | Purpose |
-| --- | --- | --- |
-| `bench-profile` | no | Enables benchmark-only direct write profiling hooks and forwards to `tiberius/bulk-load-profile`. |
-| `integration-tests` | no | Enables SQL Server integration tests that require explicit environment setup or the xtask runner. |
-
-## Validation
-
-Default local validation does not require SQL Server:
-
-```bash
-cargo fmt --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace
-```
-
-Run SQL Server integration tests through the xtask harness:
-
-```bash
-cargo xtask sqlserver-test
-cargo xtask sqlserver-compat-probe
-```
-
-## Documentation
-
-See [Documentation Index](docs/README.md) for the maintained user and maintainer
-docs.
+- [Observability](docs/observability.md)
+- [Documentation Index](docs/README.md)

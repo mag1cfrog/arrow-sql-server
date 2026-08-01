@@ -38,8 +38,10 @@ include = [
     "examples/**",
     "docs/README.md",
     "docs/benchmarks.md",
+    "docs/getting-started.md",
     "docs/integration-tests.md",
     "docs/observability.md",
+    "docs/performance.md",
     "docs/type-mapping.md",
 ]
 

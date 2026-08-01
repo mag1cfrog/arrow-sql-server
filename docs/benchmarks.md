@@ -1,16 +1,19 @@
 # Writer Benchmarks
 
-The writer benchmark harness lives under `cargo xtask writer-bench`. It is for
-SQL Server write-path comparisons only. It does not benchmark reads, exports,
-object storage, or general database query performance.
+This is a maintainer guide for the `cargo xtask writer-bench` harness. For
+curated user-facing results and the headline claim, read
+[Performance](performance.md).
+
+The harness is for SQL Server write-path comparisons only. It does not
+benchmark reads, exports, object storage, or general database query
+performance.
 
 Benchmark results are local to the machine, container runtime, SQL Server image,
 network path, row count, batch size, and scenario used for the run. Treat local
 output as evidence for that run only, not as a portable performance claim.
 
-Historical one-off benchmark notes are intentionally not kept in the published
-documentation. Keep new comparison output in `target/` or another ignored path
-unless it becomes a maintained user-facing result.
+Keep raw comparison output in `target/` or another ignored path. Promote only
+reviewed, reproducible results into the maintained performance explanation.
 
 ## Prerequisites
 

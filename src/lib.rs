@@ -1,21 +1,15 @@
-//! High-performance Apache Arrow `RecordBatch` bulk writer for Microsoft SQL Server.
+//! High-performance Apache Arrow `RecordBatch` bulk writes for Microsoft SQL Server.
 //!
-//! Arrow SQL Server bridges Apache Arrow and Microsoft SQL Server through the
-//! Tiberius TDS driver. The crate is designed around a bidirectional boundary:
-//! Arrow schemas and [`RecordBatch`] values can be planned and written to SQL
-//! Server, and future read-side APIs can map SQL Server metadata and rows back
-//! to Arrow.
-//!
-//! The current API implements the Arrow-to-SQL Server write path first: plan an
-//! Arrow schema for SQL Server, render deterministic DDL, inspect structured
-//! diagnostics, and bulk load one or more record batches. SQL Server-to-Arrow
-//! reads are reserved for a later release.
+//! Arrow SQL Server plans Arrow schemas, generates SQL Server DDL, validates
+//! target tables, and streams [`RecordBatch`] values through a SQL Server bulk
+//! writer. The production path uses TDS directly and does not require an ODBC
+//! driver.
 //!
 //! [`RecordBatch`]: arrow_array::RecordBatch
 //!
-//! # Quick Start
+//! # Start With a Schema
 //!
-//! Plan an Arrow schema and render `CREATE TABLE` SQL:
+//! Plan an Arrow schema and render matching `CREATE TABLE` SQL:
 //!
 //! ```
 //! use arrow_schema::{DataType, Field, Schema};
@@ -29,99 +23,61 @@
 //!     Field::new("id", DataType::Int64, false),
 //!     Field::new("name", DataType::Utf8, true),
 //! ]);
-//!
 //! let profile = MssqlProfile::new(
 //!     MssqlVersion::SqlServer2022,
 //!     CompatibilityLevel::SQL_SERVER_2022,
 //! )?;
-//! let outcome = profile.plan_arrow_schema(&schema, PlanOptions::default())?;
-//!
+//! let planned = profile
+//!     .plan_arrow_schema(&schema, PlanOptions::default())?
+//!     .into_value();
 //! let table = TableName::new("dbo", "people")?;
-//! let ddl = create_table_sql_from_mappings(&table, outcome.mappings());
+//! let ddl = create_table_sql_from_mappings(&table, &planned);
+//!
 //! assert!(ddl.contains("CREATE TABLE [dbo].[people]"));
 //! # Ok(())
 //! # }
 //! ```
 //!
-//! Connect through the crate-owned Tiberius compatibility boundary:
+//! Follow the [Getting Started tutorial] for a complete connection, table
+//! creation, write, and row-count verification flow.
 //!
-//! ```no_run
-//! use arrow_sql_server::{
-//!     ConnectedMssqlClient, connect_mssql_client_from_ado_string,
-//! };
+//! [Getting Started tutorial]: https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/getting-started.md
 //!
-//! async fn connect(
-//!     connection_string: &str,
-//! ) -> arrow_sql_server::Result<ConnectedMssqlClient> {
-//!     connect_mssql_client_from_ado_string(connection_string).await
-//! }
-//! ```
+//! # Core API
 //!
-//! [`BulkWriter`] validates target table metadata before writing. It does not
-//! create tables automatically; callers can use [`create_table_sql_from_mappings`]
-//! when they want this crate to produce a table definition.
+//! - [`MssqlProfile`] and [`PlanOptions`] plan Arrow fields for a specific SQL
+//!   Server version and compatibility level.
+//! - [`create_table_sql_from_mappings`] renders deterministic SQL Server DDL.
+//! - [`connect_mssql_client_from_ado_string`] creates a compatible asynchronous
+//!   SQL Server connection.
+//! - [`ConnectedMssqlClient::bulk_writer`] creates a writer for an existing
+//!   target table.
+//! - [`WriteOptions::default`] selects [`WriteBackend::Auto`], which currently
+//!   resolves to the optimized direct raw TDS backend.
+//! - [`Error::safe_error_info`] exposes sanitized, structured failure details
+//!   for user-facing reports.
 //!
-//! # Main Modules
+//! # Current Scope
 //!
-//! - [`schema`] plans Arrow fields into SQL Server column mappings and DDL
-//!   metadata.
-//! - [`mssql`] contains SQL Server identifiers, profiles, types, and DDL
-//!   helpers.
-//! - [`diagnostic`] exposes structured planning and runtime diagnostics.
-//! - The [`write` module](crate::write) contains write policies, backend
-//!   selection, and [`BulkWriter`].
+//! This crate owns reusable Arrow-to-SQL Server planning and writing. It does
+//! not provide SQL Server-to-Arrow reads, connection pooling, retries, job
+//! orchestration, migrations, or multi-table publishing workflows.
 //!
-//! # Writer Backends
+//! [`BulkWriter`] validates target metadata before writing. It does not create
+//! or replace tables automatically.
 //!
-//! [`WriteBackend::Auto`] is the default selection and currently resolves to
-//! [`WriteBackend::DirectRawBulk`].
-//! [`WriteBackend::DirectRawBulk`] is the optimized direct Arrow-to-TDS path for
-//! supported mappings. [`WriteBackend::BaselineTokenRow`] remains available as a
-//! compatibility and reference path through Tiberius `TokenRow` bulk load.
-//! [`WriteBackend::DirectFramedBulk`] uses the direct row encoder through
-//! Tiberius framed writes.
+//! # Connection Compatibility
 //!
-//! # SQL Server Compatibility
+//! Prefer [`connect_mssql_client_from_ado_string`] and
+//! [`ConnectedMssqlClient`] in downstream applications. They hide the exact
+//! `tiberius-raw-bulk` client and transport types that the writer requires.
 //!
-//! Choose the [`MssqlProfile`] that matches the SQL Server version and database
-//! compatibility level you plan to write against. The profile surface models
-//! SQL Server 2016, 2017, 2019, 2022, and 2025 version/compatibility-level pairs
-//! through [`MssqlProfile::new`]. Legacy convenience constructors such as
-//! [`MssqlProfile::sql_server_2016_compat_100`] remain available for exact
-//! legacy targets.
+//! # Guides and Reference
 //!
-//! # Tiberius Dependency Model
-//!
-//! This crate depends on the published `tiberius-raw-bulk` package as the crate
-//! name `tiberius` and owns that compatibility boundary. Downstream crates
-//! should use [`connect_mssql_client_from_ado_string`] and
-//! [`ConnectedMssqlClient`] instead of constructing a raw Tiberius client for
-//! [`BulkWriter`].
-//!
-//! ```toml
-//! [dependencies]
-//! arrow-sql-server = "0.3"
-//! ```
-//!
-//! Depending on upstream `tiberius` separately creates a distinct crate type and
-//! will not produce a client compatible with this crate's writer internals.
-//!
-//! # Feature Flags
-//!
-//! - `bench-profile`: benchmark-only direct write profiling hooks.
-//! - `integration-tests`: SQL Server integration tests that are normally run
-//!   through `cargo xtask sqlserver-test`.
-//!
-//! Docs.rs is configured to build with all features so feature-gated public
-//! items are visible in API documentation. Normal library use does not require
-//! either feature.
-//!
-//! # More Documentation
-//!
-//! - [Arrow to SQL Server Type Mapping](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/type-mapping.md)
+//! - [Type Mapping](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/type-mapping.md)
+//! - [Performance](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/performance.md)
 //! - [Observability](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/observability.md)
-//! - [Integration Tests](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/integration-tests.md)
-//! - [Writer Benchmarks](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/benchmarks.md)
+//! - [Documentation Index](https://github.com/mag1cfrog/arrow-sql-server/blob/main/docs/README.md)
 
 /// Arrow-side schema metadata.
 pub mod arrow;
@@ -133,7 +89,7 @@ pub(crate) mod conversion;
 pub mod diagnostic;
 /// Error types for Arrow SQL Server.
 pub mod error;
-/// MSSQL-side schema metadata, identifiers, profile, and DDL helpers.
+/// MSSQL-side schema metadata, identifiers, profiles, types, and DDL helpers.
 pub mod mssql;
 mod observability;
 /// Bidirectional Arrow/MSSQL schema mapping.

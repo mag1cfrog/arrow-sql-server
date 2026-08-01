@@ -1,7 +1,7 @@
 # Arrow to SQL Server Type Mapping
 
-This page documents the current Arrow-to-SQL Server planning surface for
-Arrow SQL Server.
+This reference documents the current Arrow-to-SQL Server planning surface.
+New users should start with [Getting Started](getting-started.md).
 
 The direct raw writer is the primary optimized writer. The baseline writer is
 still supported as a compatibility and reference path. The tables below show
@@ -36,8 +36,10 @@ planning.
 | `Float64` | `float(53)` | runtime check | runtime check | Non-finite values are rejected by `FloatPolicy::RejectNonFinite`. |
 | `Utf8` | `nvarchar(max)` | yes | yes | Uses UTF-16 length checks for bounded targets when selected by policy. |
 | `LargeUtf8` | `nvarchar(max)` | yes | yes | - |
+| `Utf8View` | `nvarchar(max)` | yes | yes | Uses the same string-family planning and write paths as `Utf8`. |
 | `Binary` | `varbinary(max)` | yes | yes | - |
 | `LargeBinary` | `varbinary(max)` | yes | yes | - |
+| `BinaryView` | `varbinary(max)` | yes | yes | Uses the same binary-family planning and write paths as `Binary`. |
 | `FixedSizeBinary(n)` | `binary(n)` | yes | yes | `n` must be in SQL Server `binary(n)` range `1..=8000`. |
 | `Decimal32(p, s)` | `decimal(p, s)` | runtime check | runtime check | `1 <= p <= 38`, `0 <= s <= p`. |
 | `Decimal64(p, s)` | `decimal(p, s)` | runtime check | runtime check | `1 <= p <= 38`, `0 <= s <= p`. |
@@ -97,7 +99,6 @@ The schema planner rejects these Arrow type families:
 | `Duration` | no | No SQL Server duration target is currently defined. |
 | `Interval` | no | No SQL Server interval target is currently defined. |
 | Unsupported time-unit combinations | no | Only `Time32(Second)`, `Time32(Millisecond)`, `Time64(Microsecond)`, and `Time64(Nanosecond)` are mapped. |
-| `Utf8View`, `BinaryView` | no | View arrays are not currently mapped. |
 | `List`, `LargeList`, `FixedSizeList`, `ListView`, `LargeListView` | no | Nested values are not serialized to SQL Server scalar columns. |
 | `Struct`, `Map`, `Union` | no | Nested values are not serialized to SQL Server scalar columns. |
 | `Dictionary`, `RunEndEncoded` | no | Encoded arrays are not currently decoded during planning. |
