@@ -7,17 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.1](https://github.com/mag1cfrog/arrow-tiberius/compare/v0.2.0...v0.2.1) - 2026-07-21
+## [0.3.0](https://github.com/mag1cfrog/arrow-sql-server/compare/v0.2.1...v0.3.0) - 2026-08-01
+
+### Changed
+
+- rename the package from `arrow-tiberius` to `arrow-sql-server` and the Rust import from `arrow_tiberius` to `arrow_sql_server`
+- rename project-owned tracing, environment, SQL object, Docker, test, and benchmark namespaces to Arrow SQL Server forms
+- require consumers to update Cargo dependencies and Rust imports directly; no compatibility package, alias, or re-export is provided
+- keep existing `arrow-tiberius` releases available on crates.io as historical versions while new releases continue as `arrow-sql-server`
+
+## [0.2.1](https://github.com/mag1cfrog/arrow-sql-server/compare/v0.2.0...v0.2.1) - 2026-07-21
 
 ### Added
 
-- expose detailed SQL Server bulk finalization tracing ([#183](https://github.com/mag1cfrog/arrow-tiberius/pull/183))
+- expose detailed SQL Server bulk finalization tracing ([#183](https://github.com/mag1cfrog/arrow-sql-server/pull/183))
 
 ### Other
 
-- refresh public docs for 0.2 profiles ([#181](https://github.com/mag1cfrog/arrow-tiberius/pull/181))
+- refresh public docs for 0.2 profiles ([#181](https://github.com/mag1cfrog/arrow-sql-server/pull/181))
 
-## [0.2.0](https://github.com/mag1cfrog/arrow-tiberius/compare/v0.1.6...v0.2.0) - 2026-07-07
+## [0.2.0](https://github.com/mag1cfrog/arrow-sql-server/compare/v0.1.6...v0.2.0) - 2026-07-07
 
 ### Added
 
@@ -31,13 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(ci)* run release-plz with a Rust toolchain compatible with semver checks
 - *(write)* allow DirectRawBulk to write non-null Arrow timestamps as SQL Server datetime
 
-## [0.1.6](https://github.com/mag1cfrog/arrow-tiberius/compare/v0.1.5...v0.1.6) - 2026-07-04
+## [0.1.6](https://github.com/mag1cfrog/arrow-sql-server/compare/v0.1.5...v0.1.6) - 2026-07-04
 
 ### Added
 
 - *(write)* support target-aware timestamp writes for datetime types
 
-## [0.1.5](https://github.com/mag1cfrog/arrow-tiberius/compare/v0.1.4...v0.1.5) - 2026-07-03
+## [0.1.5](https://github.com/mag1cfrog/arrow-sql-server/compare/v0.1.4...v0.1.5) - 2026-07-03
 
 ### Fixed
 

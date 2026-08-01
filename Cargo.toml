@@ -13,13 +13,14 @@ panic = "deny"
 
 [package]
 name = "arrow-sql-server"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.88"
 license = "Apache-2.0"
-repository = "https://github.com/mag1cfrog/arrow-tiberius"
-documentation = "https://docs.rs/arrow-tiberius"
-description = "Apache Arrow and SQL Server bridge through Tiberius"
+repository = "https://github.com/mag1cfrog/arrow-sql-server"
+documentation = "https://docs.rs/arrow-sql-server"
+homepage = "https://github.com/mag1cfrog/arrow-sql-server"
+description = "High-performance Apache Arrow RecordBatch bulk writer for Microsoft SQL Server."
 readme = "README.md"
 keywords = ["arrow", "sql-server", "tiberius", "tds"]
 categories = ["database"]

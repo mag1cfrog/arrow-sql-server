@@ -1,7 +1,7 @@
 # Documentation
 
 This directory contains maintained user and maintainer documentation for
-`arrow-tiberius`.
+Arrow SQL Server.
 
 ## User Guides
 

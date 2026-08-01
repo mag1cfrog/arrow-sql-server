@@ -1,10 +1,10 @@
 # Observability
 
-This document describes the `arrow-tiberius` tracing contract for applications
+This document describes the Arrow SQL Server tracing contract for applications
 that plan Arrow schemas, write Arrow `RecordBatch` values to SQL Server, or wrap
 those writes inside a higher-level workflow.
 
-`arrow-tiberius` emits spans and events through the [`tracing`] crate. It does
+Arrow SQL Server emits spans and events through the [`tracing`] crate. It does
 not install a global subscriber, choose an output sink, configure filters, or
 send telemetry to a vendor. Applications own subscriber setup and decide where
 events go.
@@ -14,7 +14,7 @@ events go.
 ## Subscriber Ownership
 
 Library code only emits telemetry. It is silent unless the application has a
-subscriber installed by the time `arrow-tiberius` code runs.
+subscriber installed by the time Arrow SQL Server code runs.
 
 For a small application or test, one possible setup is:
 
@@ -39,7 +39,7 @@ fn init_tracing_for_example() {
 Production applications should choose their own subscriber, filter policy, and
 export pipeline. For example, a service might send `tracing` data through an
 OpenTelemetry layer to Grafana, Datadog, or another backend. That setup belongs
-to the application, not to `arrow-tiberius`.
+to the application, not to Arrow SQL Server.
 
 ## Target And Levels
 
@@ -59,7 +59,7 @@ tiberius_raw_bulk::protocol
 That protocol target covers lower-level phases such as connection setup, TLS
 negotiation, login, bulk-load protocol operations, packet write summaries,
 server token summaries, and SQL Browser named-instance resolution. It is emitted
-by `tiberius-raw-bulk`, not re-wrapped by `arrow-tiberius`.
+by `tiberius-raw-bulk`, not re-wrapped by Arrow SQL Server.
 
 Recommended filters:
 
@@ -118,7 +118,7 @@ table, or column names.
 
 ## Redaction Contract
 
-`arrow-tiberius` tracing does not emit:
+Arrow SQL Server tracing does not emit:
 
 - SQL Server connection strings.
 - Passwords, access tokens, or authentication material.
@@ -142,7 +142,7 @@ paths, not default end-user output.
 ## Downstream Workflow Spans
 
 Applications should add workflow, source, and output context outside
-`arrow-tiberius`. The crate cannot know job ids, source aliases, retry ids,
+Arrow SQL Server. The crate cannot know job ids, source aliases, retry ids,
 or orchestrator output names.
 
 Use a parent span around writer calls:
@@ -194,13 +194,13 @@ semantics.
 
 When a workflow writes multiple outputs, create one parent span per output or
 per logical workflow step. Keep source-specific context in the application span
-or its fields rather than expecting `arrow-tiberius` to infer it.
+or its fields rather than expecting Arrow SQL Server to infer it.
 
 ## Known Gaps
 
-- `arrow-tiberius` does not install a subscriber or exporter.
-- `arrow-tiberius` does not emit row-level telemetry.
-- `arrow-tiberius` does not emit raw packet bytes, raw row payload bytes, or
+- Arrow SQL Server does not install a subscriber or exporter.
+- Arrow SQL Server does not emit row-level telemetry.
+- Arrow SQL Server does not emit raw packet bytes, raw row payload bytes, or
   arbitrary SQL text.
 - Direct raw writer events report safe row and byte summaries. Lower-level
   packet summaries are emitted by `tiberius-raw-bulk` protocol tracing.
