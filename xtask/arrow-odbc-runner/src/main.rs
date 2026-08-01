@@ -11,9 +11,9 @@ use arrow_odbc::insert_into_table;
 use arrow_odbc::odbc_api::buffers::TextRowSet;
 use arrow_odbc::odbc_api::{Connection, Cursor, Environment};
 
-const CONNECTION_STRING_ENV: &str = "ARROW_TIBERIUS_BENCH_ODBC_CONNECTION_STRING";
-const DATABASE_ENV: &str = "ARROW_TIBERIUS_BENCH_DATABASE";
-const TABLE_PLACEHOLDER: &str = "__ARROW_TIBERIUS_ODBC_TABLE__";
+const CONNECTION_STRING_ENV: &str = "ARROW_SQL_SERVER_BENCH_ODBC_CONNECTION_STRING";
+const DATABASE_ENV: &str = "ARROW_SQL_SERVER_BENCH_DATABASE";
+const TABLE_PLACEHOLDER: &str = "__ARROW_SQL_SERVER_ODBC_TABLE__";
 const STRING_HEAVY_UNICODE_SCENARIO: &str = "string_heavy_unicode";
 const STRING_HEAVY_UNICODE_TENANT_FIRST_CODEPOINT: u32 = 0x79df;
 const STRING_HEAVY_UNICODE_TENANT_SECOND_CODEPOINT: u32 = 0x6237;
@@ -111,7 +111,7 @@ fn run_repeats(
 
     for repeat in 0..options.repeat {
         let table = format!(
-            "[dbo].[arrow_tiberius_odbc_bench_{}_{}]",
+            "[dbo].[arrow_sql_server_odbc_bench_{}_{}]",
             std::process::id(),
             repeat
         );
@@ -357,10 +357,7 @@ struct SqlServerProfile<'a> {
 }
 
 impl<'a> SqlServerProfile<'a> {
-    fn start(
-        writer: &Connection<'_>,
-        observer: Connection<'a>,
-    ) -> Result<Self, Box<dyn Error>> {
+    fn start(writer: &Connection<'_>, observer: Connection<'a>) -> Result<Self, Box<dyn Error>> {
         let writer_session_id = select_session_id(writer)?;
         Ok(Self {
             recovery_model: recovery_model(&observer)?,
@@ -400,8 +397,7 @@ impl<'a> SqlServerProfile<'a> {
         phase: &str,
         work: impl FnOnce() -> Result<T, Box<dyn Error>>,
     ) -> Result<T, Box<dyn Error>> {
-        let initial_session_waits =
-            session_wait_snapshots(&self.observer, self.writer_session_id)?;
+        let initial_session_waits = session_wait_snapshots(&self.observer, self.writer_session_id)?;
         let initial_database_file_io = database_file_io_snapshots(&self.observer)?;
         let result = work();
         self.phase_deltas.push(SqlServerProfilePhaseDelta {
@@ -417,7 +413,6 @@ impl<'a> SqlServerProfile<'a> {
         });
         result
     }
-
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1303,7 +1298,7 @@ mod tests {
     fn temp_ipc_path(name: &str) -> PathBuf {
         let counter = TEST_FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
         std::env::temp_dir().join(format!(
-            "arrow-tiberius-odbc-runner-{name}-{}-{counter}.arrow",
+            "arrow-sql-server-odbc-runner-{name}-{}-{counter}.arrow",
             std::process::id()
         ))
     }

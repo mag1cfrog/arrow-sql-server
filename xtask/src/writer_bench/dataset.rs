@@ -133,7 +133,7 @@ mod tests {
     fn temp_ipc_path(name: &str) -> PathBuf {
         let counter = IPC_TEST_COUNTER.fetch_add(1, Ordering::Relaxed);
         std::env::temp_dir().join(format!(
-            "arrow-tiberius-{name}-{}-{counter}.arrow",
+            "arrow-sql-server-{name}-{}-{counter}.arrow",
             std::process::id()
         ))
     }

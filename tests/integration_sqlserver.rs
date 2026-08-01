@@ -29,8 +29,8 @@ use arrow_sql_server::{
 use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
-const CONNECTION_STRING_ENV: &str = "ARROW_TIBERIUS_TEST_MSSQL_URL";
-const TEST_DATABASE_ENV: &str = "ARROW_TIBERIUS_TEST_MSSQL_DATABASE";
+const CONNECTION_STRING_ENV: &str = "ARROW_SQL_SERVER_TEST_MSSQL_URL";
+const TEST_DATABASE_ENV: &str = "ARROW_SQL_SERVER_TEST_MSSQL_DATABASE";
 static TABLE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 type F16 = <Float16Type as ArrowPrimitiveType>::Native;
@@ -4718,7 +4718,7 @@ fn large_binary_array_crossing_i32_offset_boundary() -> TestResult<ArrayRef> {
 
 fn unique_table_name() -> arrow_sql_server::Result<TableName> {
     let counter = TABLE_COUNTER.fetch_add(1, Ordering::Relaxed);
-    let table = format!("arrow_tiberius_{}_{}", std::process::id(), counter);
+    let table = format!("arrow_sql_server_{}_{}", std::process::id(), counter);
 
     TableName::new("dbo", table)
 }

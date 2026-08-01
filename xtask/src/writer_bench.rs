@@ -29,7 +29,7 @@ mod sqlserver_profile;
 
 static BENCH_TABLE_COUNTER: AtomicU64 = AtomicU64::new(0);
 static BENCH_IPC_COUNTER: AtomicU64 = AtomicU64::new(0);
-const ODBC_TABLE_PLACEHOLDER: &str = "__ARROW_TIBERIUS_ODBC_TABLE__";
+const ODBC_TABLE_PLACEHOLDER: &str = "__ARROW_SQL_SERVER_ODBC_TABLE__";
 const DEFAULT_SQLSERVER_PROFILE_SAMPLE_MS: u64 = 250;
 
 pub(super) fn run(args: &[OsString]) -> Result<(), WriterBenchError> {
@@ -165,7 +165,7 @@ fn prepare_arrow_odbc_ipc_dataset(
     options: &ArrowOdbcBenchOptions,
 ) -> Result<ManagedIpcDataset, WriterBenchError> {
     let root = repository_root()?;
-    let dataset_dir = root.join("target").join("arrow-tiberius-writer-bench");
+    let dataset_dir = root.join("target").join("arrow-sql-server-writer-bench");
     std::fs::create_dir_all(&dataset_dir).map_err(WriterBenchError::Io)?;
 
     let counter = BENCH_IPC_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -175,7 +175,7 @@ fn prepare_arrow_odbc_ipc_dataset(
         options.benchmark.scenario.name
     );
     let host_path = dataset_dir.join(&filename);
-    let container_path = format!("/workspace/target/arrow-tiberius-writer-bench/{filename}");
+    let container_path = format!("/workspace/target/arrow-sql-server-writer-bench/{filename}");
     let summary = dataset::write_ipc_dataset(&options.benchmark, &host_path)?;
 
     println!("writer-bench arrow-odbc");
@@ -195,7 +195,7 @@ fn prepare_compare_ipc_dataset(
     options: &CompareBenchOptions,
 ) -> Result<ManagedIpcDataset, WriterBenchError> {
     let root = repository_root()?;
-    let dataset_dir = root.join("target").join("arrow-tiberius-writer-bench");
+    let dataset_dir = root.join("target").join("arrow-sql-server-writer-bench");
     std::fs::create_dir_all(&dataset_dir).map_err(WriterBenchError::Io)?;
 
     let counter = BENCH_IPC_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -205,7 +205,7 @@ fn prepare_compare_ipc_dataset(
         options.benchmark.scenario.name
     );
     let host_path = dataset_dir.join(&filename);
-    let container_path = format!("/workspace/target/arrow-tiberius-writer-bench/{filename}");
+    let container_path = format!("/workspace/target/arrow-sql-server-writer-bench/{filename}");
     let summary = dataset::write_ipc_dataset(&options.benchmark, &host_path)?;
 
     println!("writer-bench compare");
@@ -1833,15 +1833,15 @@ fn arrow_odbc_runner_command_options(
         network.map(|network| network.name().to_owned()),
         vec![
             (
-                "ARROW_TIBERIUS_BENCH_CONNECTION_STRING".to_owned(),
+                "ARROW_SQL_SERVER_BENCH_CONNECTION_STRING".to_owned(),
                 connection.connection_string.clone(),
             ),
             (
-                "ARROW_TIBERIUS_BENCH_ODBC_CONNECTION_STRING".to_owned(),
+                "ARROW_SQL_SERVER_BENCH_ODBC_CONNECTION_STRING".to_owned(),
                 odbc_connection_string(connection)?,
             ),
             (
-                "ARROW_TIBERIUS_BENCH_DATABASE".to_owned(),
+                "ARROW_SQL_SERVER_BENCH_DATABASE".to_owned(),
                 connection.database.clone(),
             ),
         ],
@@ -1874,7 +1874,7 @@ fn arrow_odbc_runner_args(
         "--manifest-path".to_owned(),
         "xtask/arrow-odbc-runner/Cargo.toml".to_owned(),
         "--target-dir".to_owned(),
-        "/tmp/arrow-tiberius-odbc-runner-target".to_owned(),
+        "/tmp/arrow-sql-server-odbc-runner-target".to_owned(),
         "--".to_owned(),
         "bench".to_owned(),
         "--rows".to_owned(),
@@ -1918,11 +1918,11 @@ fn odbc_bcp_runner_command_options(
         network.map(|network| network.name().to_owned()),
         vec![
             (
-                "ARROW_TIBERIUS_BENCH_ODBC_CONNECTION_STRING".to_owned(),
+                "ARROW_SQL_SERVER_BENCH_ODBC_CONNECTION_STRING".to_owned(),
                 odbc_connection_string(connection)?,
             ),
             (
-                "ARROW_TIBERIUS_BENCH_DATABASE".to_owned(),
+                "ARROW_SQL_SERVER_BENCH_DATABASE".to_owned(),
                 connection.database.clone(),
             ),
         ],
@@ -1955,7 +1955,7 @@ fn odbc_bcp_runner_args(
         "--manifest-path".to_owned(),
         "xtask/odbc-bcp-runner/Cargo.toml".to_owned(),
         "--target-dir".to_owned(),
-        "/tmp/arrow-tiberius-odbc-bcp-runner-target".to_owned(),
+        "/tmp/arrow-sql-server-odbc-bcp-runner-target".to_owned(),
         "--".to_owned(),
         "bench".to_owned(),
         "--rows".to_owned(),
@@ -3517,7 +3517,7 @@ fn prepare_baseline_ipc_dataset(
     options: &BaselineBenchOptions,
 ) -> Result<ManagedIpcDataset, WriterBenchError> {
     let root = repository_root()?;
-    let dataset_dir = root.join("target").join("arrow-tiberius-writer-bench");
+    let dataset_dir = root.join("target").join("arrow-sql-server-writer-bench");
     std::fs::create_dir_all(&dataset_dir).map_err(WriterBenchError::Io)?;
 
     let counter = BENCH_IPC_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -4048,7 +4048,7 @@ async fn select_count_query(
 
 fn unique_benchmark_table_name() -> Result<TableName, WriterBenchError> {
     let counter = BENCH_TABLE_COUNTER.fetch_add(1, Ordering::Relaxed);
-    let table = format!("arrow_tiberius_bench_{}_{}", std::process::id(), counter);
+    let table = format!("arrow_sql_server_bench_{}_{}", std::process::id(), counter);
 
     TableName::new("dbo", table).map_err(WriterBenchError::ArrowSqlServer)
 }
@@ -7334,7 +7334,7 @@ mod tests {
         let output = "\
 Compiling unrelated crate
 arrow-odbc runner
-  database: arrow_tiberius_benchmark
+  database: arrow_sql_server_benchmark
   rows written: 25
   write seconds: 0.067
   write rows/sec: 375.43
@@ -7353,7 +7353,7 @@ arrow-odbc runner
         let output = "\
 Compiling unrelated crate
 odbc-bcp runner
-  database: arrow_tiberius_benchmark
+  database: arrow_sql_server_benchmark
   rows written: 25
   write seconds: 0.067
   write rows/sec: 375.43
@@ -8610,7 +8610,7 @@ odbc-bcp runner
     fn temp_test_file(name: &str) -> PathBuf {
         let counter = TEST_FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
         std::env::temp_dir().join(format!(
-            "arrow-tiberius-{name}-{}-{counter}.arrow",
+            "arrow-sql-server-{name}-{}-{counter}.arrow",
             std::process::id()
         ))
     }

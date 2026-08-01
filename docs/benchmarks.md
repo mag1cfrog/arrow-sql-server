@@ -162,7 +162,7 @@ container:
 ```sh
 cargo xtask writer-bench baseline \
   --connection-string 'server=tcp:127.0.0.1,1433;user id=sa;password=REDACTED;TrustServerCertificate=true' \
-  --database arrow_tiberius_benchmark \
+  --database arrow_sql_server_benchmark \
   --scenario mixed_nullable \
   --rows 100000 \
   --batch-size 8192
@@ -211,7 +211,7 @@ podman images
 podman rmi <image>
 ```
 
-Generated IPC files use `target/arrow-tiberius-writer-bench/` during managed
+Generated IPC files use `target/arrow-sql-server-writer-bench/` during managed
 compare runs.
 
 ## Current Backend Scope

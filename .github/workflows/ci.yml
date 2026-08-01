@@ -45,7 +45,7 @@ jobs:
     timeout-minutes: 30
 
     env:
-      ARROW_TIBERIUS_CONTAINER_RUNTIME: docker
+      ARROW_SQL_SERVER_CONTAINER_RUNTIME: docker
 
     steps:
       - name: Checkout
@@ -93,7 +93,7 @@ jobs:
             compatibility-levels: "120 130 170"
 
     env:
-      ARROW_TIBERIUS_CONTAINER_RUNTIME: docker
+      ARROW_SQL_SERVER_CONTAINER_RUNTIME: docker
 
     steps:
       - name: Checkout

@@ -23,13 +23,13 @@ pub(crate) struct ManagedNetwork {
 
 impl ManagedNetwork {
     pub(crate) fn create(runtime: PathBuf, keep_network: bool) -> Result<Self, SqlServerError> {
-        let name = format!("arrow-tiberius-bench-network-{}", unique_suffix());
+        let name = format!("arrow-sql-server-bench-network-{}", unique_suffix());
         let mut command = Command::new(&runtime);
         command
             .arg("network")
             .arg("create")
             .arg("--label")
-            .arg("org.arrow-tiberius.xtask=sqlserver")
+            .arg("org.arrow-sql-server.xtask=sqlserver")
             .arg(&name);
 
         run_command_capture(&mut command)?;
@@ -85,14 +85,14 @@ impl SqlServerConnectionOptions {
             container_runtime: None,
             connection_string: None,
             image: "mcr.microsoft.com/mssql/server:2017-latest".to_owned(),
-            database: "arrow_tiberius_integration".to_owned(),
+            database: "arrow_sql_server_integration".to_owned(),
             keep_container: false,
         }
     }
 
     pub(crate) fn benchmark_default() -> Self {
         Self {
-            database: "arrow_tiberius_benchmark".to_owned(),
+            database: "arrow_sql_server_benchmark".to_owned(),
             ..Self::integration_default()
         }
     }
@@ -179,7 +179,7 @@ impl SqlServerContainer {
         network: Option<&ManagedNetwork>,
     ) -> Result<Self, SqlServerError> {
         let host_port = find_free_port()?;
-        let name = format!("arrow-tiberius-sqlserver-{}", unique_suffix());
+        let name = format!("arrow-sql-server-sqlserver-{}", unique_suffix());
         let password = generate_password();
 
         let mut command = Command::new(&runtime);
@@ -189,7 +189,7 @@ impl SqlServerContainer {
             .arg("--name")
             .arg(&name)
             .arg("--label")
-            .arg("org.arrow-tiberius.xtask=sqlserver")
+            .arg("org.arrow-sql-server.xtask=sqlserver")
             .arg("--env")
             .arg("ACCEPT_EULA=Y")
             .arg("--env")
@@ -399,7 +399,7 @@ fn unique_suffix() -> String {
 }
 
 fn generate_password() -> String {
-    format!("ArrowTiberius_{}!aA9", unique_suffix().replace('-', ""))
+    format!("ArrowSqlServer_{}!aA9", unique_suffix().replace('-', ""))
 }
 
 fn validate_database_name(database: &str) -> Result<(), SqlServerError> {
@@ -473,11 +473,11 @@ impl fmt::Display for SqlServerError {
     }
 }
 
-pub(crate) const CONNECTION_STRING_ENV: &str = "ARROW_TIBERIUS_TEST_MSSQL_URL";
-pub(crate) const TEST_DATABASE_ENV: &str = "ARROW_TIBERIUS_TEST_MSSQL_DATABASE";
-pub(crate) const COMPATIBILITY_LEVEL_ENV: &str = "ARROW_TIBERIUS_TEST_MSSQL_COMPATIBILITY_LEVEL";
-pub(crate) const SERVER_VERSION_ENV: &str = "ARROW_TIBERIUS_TEST_MSSQL_VERSION";
-pub(crate) const CONTAINER_RUNTIME_ENV: &str = "ARROW_TIBERIUS_CONTAINER_RUNTIME";
+pub(crate) const CONNECTION_STRING_ENV: &str = "ARROW_SQL_SERVER_TEST_MSSQL_URL";
+pub(crate) const TEST_DATABASE_ENV: &str = "ARROW_SQL_SERVER_TEST_MSSQL_DATABASE";
+pub(crate) const COMPATIBILITY_LEVEL_ENV: &str = "ARROW_SQL_SERVER_TEST_MSSQL_COMPATIBILITY_LEVEL";
+pub(crate) const SERVER_VERSION_ENV: &str = "ARROW_SQL_SERVER_TEST_MSSQL_VERSION";
+pub(crate) const CONTAINER_RUNTIME_ENV: &str = "ARROW_SQL_SERVER_CONTAINER_RUNTIME";
 const SQLSERVER_READY_TIMEOUT_SECS: u64 = 120;
 
 #[cfg(test)]
@@ -489,8 +489,8 @@ mod tests {
         let integration = SqlServerConnectionOptions::integration_default();
         let benchmark = SqlServerConnectionOptions::benchmark_default();
 
-        assert_eq!(integration.database, "arrow_tiberius_integration");
-        assert_eq!(benchmark.database, "arrow_tiberius_benchmark");
+        assert_eq!(integration.database, "arrow_sql_server_integration");
+        assert_eq!(benchmark.database, "arrow_sql_server_benchmark");
         assert_eq!(benchmark.image, integration.image);
         assert_eq!(benchmark.container_runtime, integration.container_runtime);
         assert_eq!(benchmark.connection_string, integration.connection_string);
@@ -521,18 +521,18 @@ mod tests {
     fn managed_network_exposes_container_network_name() {
         let network = ManagedNetwork {
             runtime: "podman".into(),
-            name: "arrow-tiberius-bench-network-test".to_owned(),
+            name: "arrow-sql-server-bench-network-test".to_owned(),
             keep_network: true,
         };
 
-        assert_eq!(network.name(), "arrow-tiberius-bench-network-test");
+        assert_eq!(network.name(), "arrow-sql-server-bench-network-test");
     }
 
     #[test]
     fn container_connection_uses_container_name_and_default_sqlserver_port() {
         let container = SqlServerContainer {
             runtime: "podman".into(),
-            name: "arrow-tiberius-sqlserver-test".to_owned(),
+            name: "arrow-sql-server-sqlserver-test".to_owned(),
             password: "secret".to_owned(),
             host_port: 14331,
             keep_container: true,
@@ -544,7 +544,7 @@ mod tests {
         );
         assert_eq!(
             container.container_connection(),
-            "server=tcp:arrow-tiberius-sqlserver-test,1433;user id=sa;password=secret;TrustServerCertificate=true"
+            "server=tcp:arrow-sql-server-sqlserver-test,1433;user id=sa;password=secret;TrustServerCertificate=true"
         );
     }
 
@@ -567,6 +567,6 @@ mod tests {
 
     #[test]
     fn accepts_database_names_that_can_be_used_for_managed_containers() {
-        super::validate_database_name("arrow_tiberius_benchmark_2026").unwrap();
+        super::validate_database_name("arrow_sql_server_benchmark_2026").unwrap();
     }
 }

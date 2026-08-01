@@ -9,21 +9,21 @@ use std::time::{Duration, Instant};
 
 use arrow_array::{
     Array, BinaryArray, BooleanArray, Date32Array, Decimal128Array, Float32Array, Float64Array,
-    Int16Array, Int32Array, Int64Array, Int8Array, RecordBatch, StringArray,
-    TimestampMillisecondArray, UInt16Array, UInt32Array, UInt8Array,
+    Int8Array, Int16Array, Int32Array, Int64Array, RecordBatch, StringArray,
+    TimestampMillisecondArray, UInt8Array, UInt16Array, UInt32Array,
 };
 use arrow_ipc::reader::FileReader;
 use arrow_schema::DataType;
 use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
 use libloading::Library;
 
-const CONNECTION_STRING_ENV: &str = "ARROW_TIBERIUS_BENCH_ODBC_CONNECTION_STRING";
-const DATABASE_ENV: &str = "ARROW_TIBERIUS_BENCH_DATABASE";
-const ODBC_LIBRARY_ENV: &str = "ARROW_TIBERIUS_BENCH_ODBC_LIBRARY";
-const BCP_LIBRARY_ENV: &str = "ARROW_TIBERIUS_BENCH_BCP_LIBRARY";
+const CONNECTION_STRING_ENV: &str = "ARROW_SQL_SERVER_BENCH_ODBC_CONNECTION_STRING";
+const DATABASE_ENV: &str = "ARROW_SQL_SERVER_BENCH_DATABASE";
+const ODBC_LIBRARY_ENV: &str = "ARROW_SQL_SERVER_BENCH_ODBC_LIBRARY";
+const BCP_LIBRARY_ENV: &str = "ARROW_SQL_SERVER_BENCH_BCP_LIBRARY";
 const DEFAULT_ODBC_LIBRARY: &str = "libodbc.so.2";
 const DEFAULT_BCP_LIBRARY: &str = "/opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.6.so.2.1";
-const TABLE_PLACEHOLDER: &str = "__ARROW_TIBERIUS_ODBC_TABLE__";
+const TABLE_PLACEHOLDER: &str = "__ARROW_SQL_SERVER_ODBC_TABLE__";
 const STRING_HEAVY_UNICODE_SCENARIO: &str = "string_heavy_unicode";
 const STRING_HEAVY_UNICODE_TENANT_FIRST_CODEPOINT: u32 = 0x79df;
 const STRING_HEAVY_UNICODE_TENANT_SECOND_CODEPOINT: u32 = 0x6237;
@@ -164,7 +164,7 @@ fn run_repeats(
 
     for repeat in 0..options.repeat {
         let table = format!(
-            "[dbo].[arrow_tiberius_odbc_bcp_bench_{}_{}]",
+            "[dbo].[arrow_sql_server_odbc_bcp_bench_{}_{}]",
             std::process::id(),
             repeat
         );
@@ -1920,7 +1920,10 @@ fn database_file_io_deltas(
     deltas
 }
 
-fn connection_delta(initial: &ConnectionSnapshot, final_connection: &ConnectionSnapshot) -> ConnectionDelta {
+fn connection_delta(
+    initial: &ConnectionSnapshot,
+    final_connection: &ConnectionSnapshot,
+) -> ConnectionDelta {
     ConnectionDelta {
         net_transport: final_connection.net_transport.clone(),
         protocol_type: final_connection.protocol_type.clone(),
@@ -2056,8 +2059,8 @@ fn required_arg<'a>(option: &str, value: Option<&'a String>) -> Result<&'a str, 
 mod tests {
     use super::{
         BcpColumnBindings, BcpColumnBuffer, BenchOptions, ConnectionSnapshot, DatabaseFileIoDelta,
-        DatabaseFileIoSnapshot, SessionWaitDelta, SessionWaitSnapshot, TABLE_PLACEHOLDER,
-        SQLFLT4, SQLINT1, SQLINT2, SQLINT4, SQLINT8, c_string, connection_delta,
+        DatabaseFileIoSnapshot, SQLFLT4, SQLINT1, SQLINT2, SQLINT4, SQLINT8, SessionWaitDelta,
+        SessionWaitSnapshot, TABLE_PLACEHOLDER, c_string, connection_delta,
         database_file_io_deltas, format_date32, format_decimal, format_timestamp_millis,
         push_utf16le, rows_per_second, session_wait_deltas,
         string_heavy_unicode_tenant_sentinel_count_sql, validate_ipc_schema_and_count,
@@ -2416,8 +2419,7 @@ mod tests {
             (DataType::UInt32, SQLINT8, std::mem::size_of::<i64>()),
             (DataType::Float32, SQLFLT4, std::mem::size_of::<f32>()),
         ] {
-            let buffer =
-                BcpColumnBuffer::new(&data_type).expect("extended primitive should bind");
+            let buffer = BcpColumnBuffer::new(&data_type).expect("extended primitive should bind");
 
             assert_eq!(buffer.server_type(), server_type);
             assert_eq!(buffer.bind_len().unwrap(), bind_len as i32);
