@@ -321,7 +321,11 @@ fn measure_nvarchar_cell_lengths<'a>(
             null_cell_len(column, row_index, length)?
         } else {
             let value = array.value(row_index);
-            let code_units = value.encode_utf16().count();
+            let code_units = if value.is_ascii() {
+                value.len()
+            } else {
+                value.encode_utf16().count()
+            };
             let encoded_bytes = checked_mul(code_units, 2)?;
 
             match length {
@@ -520,8 +524,14 @@ fn validate_utf16_byte_len_for_append(
 }
 
 fn append_utf16le(buf: &mut impl RawRowsAppendTarget, value: &str) {
-    for code_unit in value.encode_utf16() {
-        buf.put_u16_le(code_unit);
+    if value.is_ascii() {
+        for byte in value.bytes() {
+            buf.put_u16_le(u16::from(byte));
+        }
+    } else {
+        for code_unit in value.encode_utf16() {
+            buf.put_u16_le(code_unit);
+        }
     }
 }
 
@@ -945,11 +955,22 @@ mod tests {
     };
 
     use super::{
-        MAX_BOUNDED_TDS_VALUE_LEN, MAX_PLP_CHUNK_LEN, bounded_cell_len,
+        MAX_BOUNDED_TDS_VALUE_LEN, MAX_PLP_CHUNK_LEN, append_utf16le, bounded_cell_len,
         bounded_nvarchar_encoded_bytes, fill_nvarchar_column, fill_varbinary_column,
         measure_nvarchar_column_cell_lengths, measure_varbinary_column_cell_lengths, plp_cell_len,
         plp_nvarchar_encoded_bytes,
     };
+
+    #[test]
+    fn appends_ascii_and_non_ascii_as_utf16le() {
+        let mut ascii = Vec::new();
+        append_utf16le(&mut ascii, "Az");
+        assert_eq!(ascii, [b'A', 0, b'z', 0]);
+
+        let mut non_ascii = Vec::new();
+        append_utf16le(&mut non_ascii, "\u{e9}\u{1f642}");
+        assert_eq!(non_ascii, [0xe9, 0, 0x3d, 0xd8, 0x42, 0xde]);
+    }
 
     #[test]
     fn measures_bounded_nvarchar_cells_by_encoded_utf16_bytes() {
