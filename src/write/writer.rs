@@ -552,6 +552,9 @@ fn expected_direct_bulk_column_type(column: &DirectColumnPlan) -> Option<tiberiu
         DirectColumnEncoding::VariableWidth(VariableWidthArrowToMssql::StringToNVarChar {
             ..
         }) => Some(tiberius::ColumnType::NVarchar),
+        DirectColumnEncoding::VariableWidth(VariableWidthArrowToMssql::StringToAsciiVarChar {
+            ..
+        }) => Some(tiberius::ColumnType::BigVarChar),
         DirectColumnEncoding::VariableWidth(VariableWidthArrowToMssql::BytesToVarBinary {
             ..
         }) => Some(tiberius::ColumnType::BigVarBin),
@@ -1557,7 +1560,17 @@ mod tests {
 
     #[test]
     fn direct_bulk_target_type_validation_accepts_matching_variable_width_metadata() {
-        let mappings = vec![utf8_mapping_at(0, "name"), binary_mapping_at(1, "payload")];
+        let mappings = vec![
+            utf8_mapping_at(0, "name"),
+            schema_mapping_at(
+                1,
+                "ascii_code",
+                DataType::Utf8,
+                MssqlType::VarChar(MssqlTypeLength::Bounded(16)),
+                false,
+            ),
+            binary_mapping_at(2, "payload"),
+        ];
         let state = WriterState::new(
             WriteBackend::DirectRawBulk,
             SchemaCheck::Strict,
@@ -1566,7 +1579,8 @@ mod tests {
         .unwrap();
         let columns = vec![
             bulk_target_column_with_type(0, "name", false, tiberius::ColumnType::NVarchar),
-            bulk_target_column_with_type(1, "payload", false, tiberius::ColumnType::BigVarBin),
+            bulk_target_column_with_type(1, "ascii_code", false, tiberius::ColumnType::BigVarChar),
+            bulk_target_column_with_type(2, "payload", false, tiberius::ColumnType::BigVarBin),
         ];
 
         validate_direct_bulk_target_column_types(

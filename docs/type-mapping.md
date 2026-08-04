@@ -67,6 +67,7 @@ runtime checks.
 | `UInt64` | `UInt64Policy::CheckedBigInt` | `bigint` | runtime check | runtime check | Values greater than `i64::MAX` are rejected. |
 | `Utf8`, `LargeUtf8` | `StringPolicy::NVarCharMax` | `nvarchar(max)` | yes | yes | Default. |
 | `Utf8`, `LargeUtf8` | `StringPolicy::NVarChar(n)` | `nvarchar(n)` | runtime check | runtime check | Runtime rejects values whose UTF-16 length exceeds `n`. |
+| `Utf8`, `LargeUtf8`, `Utf8View` | `StringPolicy::AsciiVarChar(n)` | `varchar(n)` | runtime check | runtime check | `n` must be in `1..=8000`; runtime rejects non-ASCII values and values longer than `n` bytes. |
 | `Utf8`, `LargeUtf8` | `StringPolicy::ObservedNVarChar` | inferred `nvarchar(n)` | schema-only reject | schema-only reject | Requires observed values or statistics; schema-only planning currently rejects it. |
 | `Binary`, `LargeBinary` | `BinaryPolicy::VarBinaryMax` | `varbinary(max)` | yes | yes | Default. |
 | `Binary`, `LargeBinary` | `BinaryPolicy::VarBinary(n)` | `varbinary(n)` | runtime check | runtime check | Runtime rejects values whose byte length exceeds `n`. |

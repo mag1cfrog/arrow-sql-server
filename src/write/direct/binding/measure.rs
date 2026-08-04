@@ -35,7 +35,7 @@ use super::super::{
         },
         uint64::measure_uint64_decimal20_cell_lengths,
         variable_width::{
-            measure_nvarchar_column_cell_lengths, measure_varbinary_column_cell_lengths,
+            measure_string_column_cell_lengths, measure_varbinary_column_cell_lengths,
         },
     },
 };
@@ -189,21 +189,21 @@ impl BoundDirectColumn<'_> {
                 column_count,
                 cell_lengths,
             ),
-            Self::Utf8 { column, array } => measure_nvarchar_column_cell_lengths(
+            Self::Utf8 { column, array } => measure_string_column_cell_lengths(
                 *array,
                 column,
                 column_index,
                 column_count,
                 cell_lengths,
             ),
-            Self::LargeUtf8 { column, array } => measure_nvarchar_column_cell_lengths(
+            Self::LargeUtf8 { column, array } => measure_string_column_cell_lengths(
                 *array,
                 column,
                 column_index,
                 column_count,
                 cell_lengths,
             ),
-            Self::Utf8View { column, array } => measure_nvarchar_column_cell_lengths(
+            Self::Utf8View { column, array } => measure_string_column_cell_lengths(
                 *array,
                 column,
                 column_index,

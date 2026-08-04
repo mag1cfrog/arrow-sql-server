@@ -30,7 +30,7 @@ pub(super) fn nvar_char_cell<'a>(
     };
     debug_assert_eq!(length, classified);
 
-    let value = mssql_nvarchar_value(mapping, row_index, cell)?;
+    let value = mssql_string_value(mapping, row_index, cell)?;
     let code_units = value.encode_utf16().count();
 
     if exceeds_length(length, code_units) {
@@ -45,6 +45,55 @@ pub(super) fn nvar_char_cell<'a>(
     }
 
     Ok(MssqlCell::NVarChar(Some(value)))
+}
+
+pub(super) fn ascii_var_char_cell<'a>(
+    mapping: &SchemaMapping,
+    row_index: usize,
+    length: MssqlTypeLength,
+    cell: ArrowCell<'a>,
+) -> Result<MssqlCell<'a>> {
+    let classified = match VariableWidthArrowToMssql::classify(mapping, row_index)? {
+        VariableWidthArrowToMssql::StringToAsciiVarChar { length } => length,
+        other => {
+            return Err(value_conversion_error(row_mapping_diagnostic(
+                mapping,
+                row_index,
+                DiagnosticCode::ValueConversionUnsupported,
+                format!(
+                    "variable-width mapping {other:?} is not supported by ASCII varchar conversion"
+                ),
+            )));
+        }
+    };
+    debug_assert_eq!(length, classified);
+
+    let value = mssql_string_value(mapping, row_index, cell)?;
+    if !value.is_ascii() {
+        return Err(value_conversion_error(row_mapping_diagnostic(
+            mapping,
+            row_index,
+            DiagnosticCode::ValueConversionUnsupported,
+            format!(
+                "string value contains non-ASCII characters and cannot be written as planned {}",
+                mapping.mssql().ty().to_sql()
+            ),
+        )));
+    }
+
+    if exceeds_length(length, value.len()) {
+        return Err(value_too_long_error(
+            mapping,
+            row_index,
+            format!(
+                "ASCII string value has {} byte(s), exceeding planned {}",
+                value.len(),
+                mapping.mssql().ty().to_sql()
+            ),
+        ));
+    }
+
+    Ok(MssqlCell::VarChar(Some(value)))
 }
 
 pub(super) fn var_binary_cell<'a>(
@@ -114,7 +163,7 @@ pub(super) fn binary_cell<'a>(
     Ok(MssqlCell::VarBinary(Some(value)))
 }
 
-fn mssql_nvarchar_value<'a>(
+fn mssql_string_value<'a>(
     mapping: &SchemaMapping,
     row_index: usize,
     cell: ArrowCell<'a>,
@@ -267,6 +316,30 @@ mod tests {
             Some(2),
             Some((0, "text")),
         );
+    }
+
+    #[test]
+    fn accepts_bounded_ascii_varchar_and_rejects_invalid_values() {
+        let mappings = mappings_for_schema_with_options(
+            Schema::new(vec![Field::new("text", DataType::Utf8, true)]),
+            PlanOptions {
+                string_policy: StringPolicy::AsciiVarChar(2),
+                ..PlanOptions::default()
+            },
+        );
+
+        assert_eq!(
+            convert_cell(&mappings[0], ArrowCell::Utf8("ab"), 0).unwrap(),
+            MssqlCell::VarChar(Some("ab"))
+        );
+
+        for (row_index, value, code) in [
+            (1, "abc", DiagnosticCode::ValueTooLong),
+            (2, "e\u{301}", DiagnosticCode::ValueConversionUnsupported),
+        ] {
+            let err = convert_cell(&mappings[0], ArrowCell::Utf8(value), row_index).unwrap_err();
+            assert_single_diagnostic(err, code, Some(row_index), Some((0, "text")));
+        }
     }
 
     #[test]

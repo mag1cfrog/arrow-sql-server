@@ -22,8 +22,8 @@ use arrow_schema::{DataType, Field, Schema, TimeUnit};
 use arrow_sql_server::{
     ArrowFieldRef, BulkWriter, Date64Policy, DecimalPolicy, DiagnosticCode, DiagnosticSet, Error,
     Identifier, MssqlColumn, MssqlProfile, MssqlType, MssqlTypeLength, NanosecondPolicy,
-    PlanOptions, PlanOutcome, PlannedSchema, SchemaMapping, TableName, TimestampPolicy,
-    TimezonePolicy, UInt64Policy, WriteBackend, WriteOptions, WritePhase,
+    PlanOptions, PlanOutcome, PlannedSchema, SchemaMapping, StringPolicy, TableName,
+    TimestampPolicy, TimezonePolicy, UInt64Policy, WriteBackend, WriteOptions, WritePhase,
     create_table_sql_from_mappings,
 };
 use tokio::net::TcpStream;
@@ -1153,6 +1153,88 @@ async fn writer_round_trips_float16_real_values_across_supported_backends() -> T
             ensure_eq(rows[2].get::<i32, _>(0), Some(3), "row 2 row_id")?;
             ensure_eq(rows[2].get::<f32, _>(1), Some(-2.25), "row 2 half_nn")?;
             ensure_eq(rows[2].get::<f32, _>(2), Some(0.0), "row 2 half_null")?;
+
+            Ok::<(), Box<dyn std::error::Error>>(())
+        }
+        .await;
+
+        let drop_result = drop_table(&mut client, &table).await;
+        result?;
+        drop_result?;
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn writers_round_trip_ascii_varchar_across_supported_backends() -> TestResult<()> {
+    let Some((connection_string, database)) = integration_config() else {
+        eprintln!(
+            "skipping SQL Server ASCII varchar integration test: {CONNECTION_STRING_ENV} or {TEST_DATABASE_ENV} is not set"
+        );
+        return Ok(());
+    };
+
+    let mut client = connect(&connection_string, &database).await?;
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("row_id", DataType::Int32, false),
+        Field::new("code", DataType::Utf8, true),
+    ]));
+    let (mappings, _diagnostics) = plan_arrow_schema_to_mssql_mappings(
+        Arc::clone(&schema),
+        integration_mssql_profile(),
+        PlanOptions {
+            string_policy: StringPolicy::AsciiVarChar(8),
+            ..PlanOptions::default()
+        },
+    )?
+    .into_parts();
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int32Array::from(vec![1_i32, 2, 3])) as ArrayRef,
+            Arc::new(StringArray::from(vec![Some("ABC123"), Some(""), None])),
+        ],
+    )?;
+
+    for backend in [WriteBackend::BaselineTokenRow, WriteBackend::DirectRawBulk] {
+        let table = unique_table_name()?;
+        execute_sql(
+            &mut client,
+            create_table_sql_from_mappings(&table, &mappings),
+        )
+        .await?;
+
+        let result = async {
+            let mut writer = BulkWriter::new(
+                &mut client,
+                table.clone(),
+                mappings.clone(),
+                WriteOptions {
+                    backend,
+                    ..WriteOptions::default()
+                },
+            )
+            .await?;
+            let stats = writer.write_batch(&batch).await?;
+            ensure_eq(writer.finish().await?, stats, "finish stats")?;
+
+            let rows = client
+                .simple_query(format!(
+                    "SELECT [row_id], [code], DATALENGTH([code]) FROM {} ORDER BY [row_id]",
+                    table.quoted_sql()
+                ))
+                .await?
+                .into_first_result()
+                .await?;
+
+            ensure_eq(rows.len(), 3, "row count")?;
+            ensure_eq(rows[0].get::<&str, _>(1), Some("ABC123"), "row 0 code")?;
+            ensure_eq(rows[0].get::<i32, _>(2), Some(6), "row 0 bytes")?;
+            ensure_eq(rows[1].get::<&str, _>(1), Some(""), "row 1 code")?;
+            ensure_eq(rows[1].get::<i32, _>(2), Some(0), "row 1 bytes")?;
+            ensure_eq(rows[2].get::<&str, _>(1), None, "row 2 code")?;
+            ensure_eq(rows[2].get::<i32, _>(2), None, "row 2 bytes")?;
 
             Ok::<(), Box<dyn std::error::Error>>(())
         }

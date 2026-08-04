@@ -221,6 +221,7 @@ fn mssql_type_family(ty: &MssqlType) -> &'static str {
         MssqlType::Real => "real",
         MssqlType::Float { .. } => "float",
         MssqlType::NVarChar(_) => "nvarchar",
+        MssqlType::VarChar(_) => "varchar",
         MssqlType::VarBinary(_) => "varbinary",
         MssqlType::Binary(_) => "binary",
         MssqlType::Decimal { .. } => "decimal",

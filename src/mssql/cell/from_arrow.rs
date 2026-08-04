@@ -21,7 +21,7 @@ use temporal::{
     mssql_time_value, null_datetime_cell, null_datetime2_cell, null_datetimeoffset_cell,
     null_time_cell,
 };
-use variable_width::{binary_cell, nvar_char_cell, var_binary_cell};
+use variable_width::{ascii_var_char_cell, binary_cell, nvar_char_cell, var_binary_cell};
 
 /// Direction-specific runtime context for Arrow-to-MSSQL value conversion.
 #[derive(Debug, Clone, Copy)]
@@ -121,6 +121,7 @@ pub(crate) fn mssql_cell_from_arrow_cell<'a>(
             mssql_datetimeoffset_value(runtime_mapping, row_index, cell)?,
         ))),
         MssqlType::NVarChar(length) => nvar_char_cell(mapping, row_index, *length, cell),
+        MssqlType::VarChar(length) => ascii_var_char_cell(mapping, row_index, *length, cell),
         MssqlType::VarBinary(length) => var_binary_cell(mapping, row_index, *length, cell),
         MssqlType::Binary(length) => binary_cell(mapping, row_index, *length, cell),
     }
@@ -144,6 +145,7 @@ fn null_mssql_cell<'a>(mapping: &SchemaMapping, row_index: usize) -> Result<Mssq
         MssqlType::Real => Ok(MssqlCell::Real(None)),
         MssqlType::Float { .. } => Ok(MssqlCell::Float(None)),
         MssqlType::NVarChar(_) => Ok(MssqlCell::NVarChar(None)),
+        MssqlType::VarChar(_) => Ok(MssqlCell::VarChar(None)),
         MssqlType::VarBinary(_) => Ok(MssqlCell::VarBinary(None)),
         MssqlType::Binary(_) => Ok(MssqlCell::VarBinary(None)),
         ty => Err(unsupported_value_conversion(

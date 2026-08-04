@@ -96,6 +96,18 @@ fn plan_arrow_string_as_mssql_type(
     match policy {
         StringPolicy::NVarCharMax => Ok(MssqlType::NVarChar(MssqlTypeLength::Max)),
         StringPolicy::NVarChar(length) => Ok(MssqlType::NVarChar(MssqlTypeLength::Bounded(length))),
+        StringPolicy::AsciiVarChar(length)
+            if (1..=SQL_SERVER_MAX_VARCHAR_LEN).contains(&length) =>
+        {
+            Ok(MssqlType::VarChar(MssqlTypeLength::Bounded(length)))
+        }
+        StringPolicy::AsciiVarChar(length) => Err(string_length_out_of_range_for_arrow_to_mssql(
+            index,
+            field,
+            format!(
+                "ASCII varchar length {length} is outside SQL Server varchar(n) range 1..={SQL_SERVER_MAX_VARCHAR_LEN}"
+            ),
+        )),
         StringPolicy::ObservedNVarChar => Err(observed_data_required_for_arrow_to_mssql(
             index,
             field,
@@ -339,6 +351,15 @@ fn fixed_size_binary_out_of_range_for_arrow_to_mssql(
         .with_field(FieldRef::new(index, field.name()))
 }
 
+fn string_length_out_of_range_for_arrow_to_mssql(
+    index: usize,
+    field: &Field,
+    message: impl Into<String>,
+) -> Diagnostic {
+    Diagnostic::error(DiagnosticCode::UnsupportedArrowType, message)
+        .with_field(FieldRef::new(index, field.name()))
+}
+
 fn unsupported_arrow_type_for_arrow_to_mssql(
     index: usize,
     field: &Field,
@@ -375,6 +396,7 @@ fn unsupported_arrow_type_family(data_type: &DataType) -> &'static str {
 
 const SQL_SERVER_MAX_DECIMAL_PRECISION: u8 = 38;
 const SQL_SERVER_MAX_BINARY_LEN: usize = 8000;
+const SQL_SERVER_MAX_VARCHAR_LEN: usize = 8000;
 
 #[cfg(test)]
 mod tests {
@@ -458,6 +480,17 @@ mod tests {
         );
         assert_eq!(
             plan_type(
+                DataType::Utf8,
+                PlanOptions {
+                    string_policy: StringPolicy::AsciiVarChar(128),
+                    ..PlanOptions::default()
+                },
+            )
+            .unwrap(),
+            MssqlType::VarChar(MssqlTypeLength::Bounded(128))
+        );
+        assert_eq!(
+            plan_type(
                 DataType::Binary,
                 PlanOptions {
                     binary_policy: crate::BinaryPolicy::VarBinary(256),
@@ -478,6 +511,23 @@ mod tests {
             .unwrap(),
             MssqlType::VarBinary(MssqlTypeLength::Bounded(256))
         );
+    }
+
+    #[test]
+    fn rejects_ascii_varchar_lengths_outside_sql_server_range() {
+        for length in [0, 8001] {
+            let diagnostic = plan_type(
+                DataType::Utf8,
+                PlanOptions {
+                    string_policy: StringPolicy::AsciiVarChar(length),
+                    ..PlanOptions::default()
+                },
+            )
+            .unwrap_err();
+
+            assert_eq!(diagnostic.code(), DiagnosticCode::UnsupportedArrowType);
+            assert!(diagnostic.message().contains("range 1..=8000"));
+        }
     }
 
     #[test]

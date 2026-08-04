@@ -63,33 +63,39 @@ impl RawRowsAppendTarget for Vec<u8> {
     }
 }
 
-/// Measures one string-family-to-nvarchar column into a row-major cell length matrix.
-pub(crate) fn measure_nvarchar_column_cell_lengths<'a>(
+/// Measures one string-family column into a row-major cell length matrix.
+pub(crate) fn measure_string_column_cell_lengths<'a>(
     array: impl StringArrayType<'a>,
     column: &DirectColumnPlan,
     column_index: usize,
     column_count: usize,
     cell_lengths: &mut [usize],
 ) -> Result<()> {
-    let length = match column.encoding() {
+    match column.encoding() {
         DirectColumnEncoding::VariableWidth(VariableWidthArrowToMssql::StringToNVarChar {
             length,
-        }) => length,
-        other => {
-            return Err(unsupported_batch(format!(
-                "direct nvarchar layout cannot measure mapping {other:?}"
-            )));
-        }
-    };
-
-    measure_nvarchar_cell_lengths(
-        array,
-        column,
-        column_index,
-        column_count,
-        length,
-        cell_lengths,
-    )
+        }) => measure_nvarchar_cell_lengths(
+            array,
+            column,
+            column_index,
+            column_count,
+            length,
+            cell_lengths,
+        ),
+        DirectColumnEncoding::VariableWidth(VariableWidthArrowToMssql::StringToAsciiVarChar {
+            length,
+        }) => measure_ascii_varchar_cell_lengths(
+            array,
+            column,
+            column_index,
+            column_count,
+            length,
+            cell_lengths,
+        ),
+        other => Err(unsupported_batch(format!(
+            "direct string layout cannot measure mapping {other:?}"
+        ))),
+    }
 }
 
 /// Measures one binary-family-to-varbinary column into a row-major cell length matrix.
@@ -121,8 +127,8 @@ pub(crate) fn measure_varbinary_column_cell_lengths<'a>(
     )
 }
 
-/// Fills one string-family-to-nvarchar column into an already allocated rows payload.
-pub(crate) fn fill_nvarchar_column<'a>(
+/// Fills one string-family column into an already allocated rows payload.
+pub(crate) fn fill_string_column<'a>(
     array: impl StringArrayType<'a>,
     column: &DirectColumnPlan,
     column_index: usize,
@@ -130,17 +136,44 @@ pub(crate) fn fill_nvarchar_column<'a>(
     layout: &RowLayout,
     bytes: &mut [u8],
 ) -> Result<()> {
-    let length = match column.encoding() {
+    match column.encoding() {
         DirectColumnEncoding::VariableWidth(VariableWidthArrowToMssql::StringToNVarChar {
             length,
-        }) => length,
-        other => {
-            return Err(unsupported_batch(format!(
-                "direct nvarchar fill cannot encode mapping {other:?}"
-            )));
-        }
-    };
+        }) => fill_nvarchar_column(
+            array,
+            column,
+            column_index,
+            column_count,
+            layout,
+            bytes,
+            length,
+        ),
+        DirectColumnEncoding::VariableWidth(VariableWidthArrowToMssql::StringToAsciiVarChar {
+            length,
+        }) => fill_ascii_varchar_column(
+            array,
+            column,
+            column_index,
+            column_count,
+            layout,
+            bytes,
+            length,
+        ),
+        other => Err(unsupported_batch(format!(
+            "direct string fill cannot encode mapping {other:?}"
+        ))),
+    }
+}
 
+fn fill_nvarchar_column<'a>(
+    array: impl StringArrayType<'a>,
+    column: &DirectColumnPlan,
+    column_index: usize,
+    column_count: usize,
+    layout: &RowLayout,
+    bytes: &mut [u8],
+    length: MssqlTypeLength,
+) -> Result<()> {
     for row_index in 0..array.len() {
         let cell = cell_position(layout, row_index, column_index, column_count)?;
 
@@ -148,6 +181,35 @@ pub(crate) fn fill_nvarchar_column<'a>(
             write_null_cell(bytes, cell, column, row_index, length)?;
         } else {
             write_nvarchar_cell(
+                bytes,
+                cell,
+                column,
+                row_index,
+                length,
+                array.value(row_index),
+            )?;
+        }
+    }
+
+    Ok(())
+}
+
+fn fill_ascii_varchar_column<'a>(
+    array: impl StringArrayType<'a>,
+    column: &DirectColumnPlan,
+    column_index: usize,
+    column_count: usize,
+    layout: &RowLayout,
+    bytes: &mut [u8],
+    length: MssqlTypeLength,
+) -> Result<()> {
+    for row_index in 0..array.len() {
+        let cell = cell_position(layout, row_index, column_index, column_count)?;
+
+        if array.is_null(row_index) {
+            write_null_cell(bytes, cell, column, row_index, length)?;
+        } else {
+            write_ascii_varchar_cell(
                 bytes,
                 cell,
                 column,
@@ -201,25 +263,35 @@ pub(crate) fn fill_varbinary_column<'a>(
     Ok(())
 }
 
-/// Appends one string-family-to-nvarchar cell to a raw bulk append buffer.
-pub(crate) fn append_nvarchar_cell<'a>(
+/// Appends one string-family cell to a raw bulk append buffer.
+pub(crate) fn append_string_cell<'a>(
     buf: &mut impl RawRowsAppendTarget,
     array: impl StringArrayType<'a>,
     column: &DirectColumnPlan,
     row_index: usize,
     measured_len: usize,
 ) -> Result<()> {
-    let length = match column.encoding() {
+    match column.encoding() {
         DirectColumnEncoding::VariableWidth(VariableWidthArrowToMssql::StringToNVarChar {
             length,
-        }) => length,
-        other => {
-            return Err(unsupported_batch(format!(
-                "direct nvarchar append cannot encode mapping {other:?}"
-            )));
-        }
-    };
+        }) => append_nvarchar_cell(buf, array, column, row_index, measured_len, length),
+        DirectColumnEncoding::VariableWidth(VariableWidthArrowToMssql::StringToAsciiVarChar {
+            length,
+        }) => append_ascii_varchar_cell(buf, array, column, row_index, measured_len, length),
+        other => Err(unsupported_batch(format!(
+            "direct string append cannot encode mapping {other:?}"
+        ))),
+    }
+}
 
+fn append_nvarchar_cell<'a>(
+    buf: &mut impl RawRowsAppendTarget,
+    array: impl StringArrayType<'a>,
+    column: &DirectColumnPlan,
+    row_index: usize,
+    measured_len: usize,
+    length: MssqlTypeLength,
+) -> Result<()> {
     if array.is_null(row_index) {
         return append_null_cell(buf, column, row_index, measured_len, length);
     }
@@ -257,6 +329,44 @@ pub(crate) fn append_nvarchar_cell<'a>(
                 plp_nvarchar_encoded_bytes_from_len(column, row_index, measured_len)?;
             profile::record_nvarchar_utf16_bytes(encoded_bytes);
             append_plp_nvarchar_cell(buf, array.value(row_index), encoded_bytes)
+        }
+    }
+}
+
+fn append_ascii_varchar_cell<'a>(
+    buf: &mut impl RawRowsAppendTarget,
+    array: impl StringArrayType<'a>,
+    column: &DirectColumnPlan,
+    row_index: usize,
+    measured_len: usize,
+    length: MssqlTypeLength,
+) -> Result<()> {
+    if array.is_null(row_index) {
+        return append_null_cell(buf, column, row_index, measured_len, length);
+    }
+
+    let value = array.value(row_index);
+    validate_ascii_value(column, row_index, value)?;
+
+    match length {
+        MssqlTypeLength::Bounded(limit) => {
+            if value.len() > limit {
+                return Err(value_too_long_error(
+                    column,
+                    row_index,
+                    format!(
+                        "ASCII string value has {} byte(s), exceeding planned {}",
+                        value.len(),
+                        column.target_type().to_sql()
+                    ),
+                ));
+            }
+            profile::record_varchar_bytes(value.len());
+            append_bounded_payload_cell(buf, column, row_index, measured_len, value.as_bytes())
+        }
+        MssqlTypeLength::Max => {
+            profile::record_varchar_bytes(value.len());
+            append_plp_payload_cell(buf, column, row_index, measured_len, value.as_bytes())
         }
     }
 }
@@ -336,6 +446,47 @@ fn measure_nvarchar_cell_lengths<'a>(
                             row_index,
                             format!(
                                 "string value has {code_units} UTF-16 code unit(s), exceeding planned {}",
+                                column.target_type().to_sql()
+                            ),
+                        ));
+                    }
+
+                    bounded_cell_len(encoded_bytes)?
+                }
+                MssqlTypeLength::Max => plp_cell_len(encoded_bytes)?,
+            }
+        };
+
+        cell_lengths[row_index * column_count + column_index] = cell_len;
+    }
+
+    Ok(())
+}
+
+fn measure_ascii_varchar_cell_lengths<'a>(
+    array: impl StringArrayType<'a>,
+    column: &DirectColumnPlan,
+    column_index: usize,
+    column_count: usize,
+    length: MssqlTypeLength,
+    cell_lengths: &mut [usize],
+) -> Result<()> {
+    for row_index in 0..array.len() {
+        let cell_len = if array.is_null(row_index) {
+            null_cell_len(column, row_index, length)?
+        } else {
+            let value = array.value(row_index);
+            validate_ascii_value(column, row_index, value)?;
+            let encoded_bytes = value.len();
+
+            match length {
+                MssqlTypeLength::Bounded(limit) => {
+                    if encoded_bytes > limit {
+                        return Err(value_too_long_error(
+                            column,
+                            row_index,
+                            format!(
+                                "ASCII string value has {encoded_bytes} byte(s), exceeding planned {}",
                                 column.target_type().to_sql()
                             ),
                         ));
@@ -657,6 +808,35 @@ fn write_nvarchar_cell(
     }
 }
 
+fn write_ascii_varchar_cell(
+    bytes: &mut [u8],
+    cell: &CellPosition,
+    column: &DirectColumnPlan,
+    row_index: usize,
+    length: MssqlTypeLength,
+    value: &str,
+) -> Result<()> {
+    validate_ascii_value(column, row_index, value)?;
+
+    match length {
+        MssqlTypeLength::Bounded(limit) => {
+            if value.len() > limit {
+                return Err(value_too_long_error(
+                    column,
+                    row_index,
+                    format!(
+                        "ASCII string value has {} byte(s), exceeding planned {}",
+                        value.len(),
+                        column.target_type().to_sql()
+                    ),
+                ));
+            }
+            write_bounded_payload_cell(bytes, cell, value.as_bytes())
+        }
+        MssqlTypeLength::Max => write_plp_payload_cell(bytes, cell, value.as_bytes()),
+    }
+}
+
 fn write_varbinary_cell(
     bytes: &mut [u8],
     cell: &CellPosition,
@@ -817,6 +997,22 @@ fn validate_utf16_byte_len(cell: &CellPosition, encoded_bytes: usize) -> Result<
     )))
 }
 
+fn validate_ascii_value(column: &DirectColumnPlan, row_index: usize, value: &str) -> Result<()> {
+    if value.is_ascii() {
+        return Ok(());
+    }
+
+    Err(value_conversion_error(row_column_diagnostic(
+        column,
+        row_index,
+        DiagnosticCode::ValueConversionUnsupported,
+        format!(
+            "string value contains non-ASCII characters and cannot be written as planned {}",
+            column.target_type().to_sql()
+        ),
+    )))
+}
+
 fn write_utf16le(dst: &mut [u8], value: &str) {
     for (chunk, code_unit) in dst.chunks_exact_mut(2).zip(value.encode_utf16()) {
         chunk.copy_from_slice(&code_unit.to_le_bytes());
@@ -955,10 +1151,10 @@ mod tests {
     };
 
     use super::{
-        MAX_BOUNDED_TDS_VALUE_LEN, MAX_PLP_CHUNK_LEN, append_utf16le, bounded_cell_len,
-        bounded_nvarchar_encoded_bytes, fill_nvarchar_column, fill_varbinary_column,
-        measure_nvarchar_column_cell_lengths, measure_varbinary_column_cell_lengths, plp_cell_len,
-        plp_nvarchar_encoded_bytes,
+        MAX_BOUNDED_TDS_VALUE_LEN, MAX_PLP_CHUNK_LEN, append_string_cell, append_utf16le,
+        bounded_cell_len, bounded_nvarchar_encoded_bytes, fill_string_column,
+        fill_varbinary_column, measure_string_column_cell_lengths,
+        measure_varbinary_column_cell_lengths, plp_cell_len, plp_nvarchar_encoded_bytes,
     };
 
     #[test]
@@ -973,6 +1169,38 @@ mod tests {
     }
 
     #[test]
+    fn encodes_ascii_varchar_as_single_bytes_and_rejects_non_ascii() {
+        let array = StringArray::from(vec![Some("ab"), Some(""), None]);
+        let plan = plan(&[mapping(
+            0,
+            "text",
+            DataType::Utf8,
+            MssqlType::VarChar(MssqlTypeLength::Bounded(2)),
+            true,
+        )]);
+        let mut cell_lengths = vec![0; array.len()];
+
+        measure_string_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
+            .unwrap();
+        assert_eq!(cell_lengths, [4, 2, 2]);
+
+        let mut encoded = Vec::new();
+        append_string_cell(&mut encoded, &array, &plan.columns()[0], 0, cell_lengths[0]).unwrap();
+        assert_eq!(encoded, [2, 0, b'a', b'b']);
+
+        let non_ascii = StringArray::from(vec![Some("\u{e9}")]);
+        let err =
+            measure_string_column_cell_lengths(&non_ascii, &plan.columns()[0], 0, 1, &mut [0])
+                .unwrap_err();
+        assert_single_diagnostic(
+            err,
+            DiagnosticCode::ValueConversionUnsupported,
+            Some(0),
+            Some((0, "text")),
+        );
+    }
+
+    #[test]
     fn measures_bounded_nvarchar_cells_by_encoded_utf16_bytes() {
         let array = StringArray::from(vec![Some("ab"), Some("🙂"), None]);
         let plan = plan(&[mapping(
@@ -984,7 +1212,7 @@ mod tests {
         )]);
         let mut cell_lengths = vec![0; array.len()];
 
-        measure_nvarchar_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
+        measure_string_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
             .unwrap();
 
         assert_eq!(cell_lengths, [6, 6, 2]);
@@ -1002,7 +1230,7 @@ mod tests {
         )]);
         let mut cell_lengths = vec![0; array.len()];
 
-        measure_nvarchar_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
+        measure_string_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
             .unwrap();
 
         assert_eq!(cell_lengths, [18, 12, 8]);
@@ -1056,14 +1284,9 @@ mod tests {
         )]);
         let mut cell_lengths = vec![0; array.len()];
 
-        let err = measure_nvarchar_column_cell_lengths(
-            &array,
-            &plan.columns()[0],
-            0,
-            1,
-            &mut cell_lengths,
-        )
-        .unwrap_err();
+        let err =
+            measure_string_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
+                .unwrap_err();
 
         assert_single_diagnostic(
             err,
@@ -1114,14 +1337,9 @@ mod tests {
         )]);
         let mut cell_lengths = vec![0; array.len()];
 
-        let err = measure_nvarchar_column_cell_lengths(
-            &array,
-            &plan.columns()[0],
-            0,
-            1,
-            &mut cell_lengths,
-        )
-        .unwrap_err();
+        let err =
+            measure_string_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
+                .unwrap_err();
 
         assert_single_diagnostic(
             err,
@@ -1184,7 +1402,7 @@ mod tests {
         let layout = build_fixed_width_row_layout(3, 1, &[6, 6, 2]).unwrap();
         let mut bytes = allocate_rows_payload_with_tokens(&layout);
 
-        fill_nvarchar_column(&array, &plan.columns()[0], 0, 1, &layout, &mut bytes).unwrap();
+        fill_string_column(&array, &plan.columns()[0], 0, 1, &layout, &mut bytes).unwrap();
 
         assert_eq!(
             bytes,
@@ -1207,7 +1425,7 @@ mod tests {
         let layout = build_fixed_width_row_layout(3, 1, &[18, 12, 8]).unwrap();
         let mut bytes = allocate_rows_payload_with_tokens(&layout);
 
-        fill_nvarchar_column(&array, &plan.columns()[0], 0, 1, &layout, &mut bytes).unwrap();
+        fill_string_column(&array, &plan.columns()[0], 0, 1, &layout, &mut bytes).unwrap();
 
         assert_eq!(
             bytes,
@@ -1277,7 +1495,7 @@ mod tests {
         )]);
         let mut cell_lengths = vec![0; array.len()];
 
-        measure_nvarchar_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
+        measure_string_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
             .unwrap();
 
         assert_eq!(cell_lengths, [6, 6, 6, 2]);
@@ -1318,14 +1536,9 @@ mod tests {
         )]);
         let mut cell_lengths = vec![0; array.len()];
 
-        let err = measure_nvarchar_column_cell_lengths(
-            &array,
-            &plan.columns()[0],
-            0,
-            1,
-            &mut cell_lengths,
-        )
-        .unwrap_err();
+        let err =
+            measure_string_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
+                .unwrap_err();
 
         assert_single_diagnostic(
             err,
@@ -1377,7 +1590,7 @@ mod tests {
         let layout = build_fixed_width_row_layout(4, 1, &[6, 6, 2, 2]).unwrap();
         let mut bytes = allocate_rows_payload_with_tokens(&layout);
 
-        fill_nvarchar_column(&array, &plan.columns()[0], 0, 1, &layout, &mut bytes).unwrap();
+        fill_string_column(&array, &plan.columns()[0], 0, 1, &layout, &mut bytes).unwrap();
 
         assert_eq!(
             bytes,
@@ -1400,7 +1613,7 @@ mod tests {
         )]);
         let mut cell_lengths = vec![0; array.len()];
 
-        measure_nvarchar_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
+        measure_string_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
             .unwrap();
 
         assert_eq!(cell_lengths, [6, 6, 2]);
@@ -1418,14 +1631,9 @@ mod tests {
         )]);
         let mut cell_lengths = vec![0; array.len()];
 
-        let err = measure_nvarchar_column_cell_lengths(
-            &array,
-            &plan.columns()[0],
-            0,
-            1,
-            &mut cell_lengths,
-        )
-        .unwrap_err();
+        let err =
+            measure_string_column_cell_lengths(&array, &plan.columns()[0], 0, 1, &mut cell_lengths)
+                .unwrap_err();
 
         assert_single_diagnostic(
             err,

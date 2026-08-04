@@ -25,7 +25,7 @@ use super::super::{
             fill_timestamp_nanosecond_direct_column, fill_timestamp_second_direct_column,
         },
         uint64::fill_uint64_decimal20_column,
-        variable_width::{fill_nvarchar_column, fill_varbinary_column},
+        variable_width::{fill_string_column, fill_varbinary_column},
     },
 };
 use super::BoundDirectColumn;
@@ -142,13 +142,13 @@ impl BoundDirectColumn<'_> {
                 fill_float64_column(array, column, column_index, column_count, layout, bytes)
             }
             Self::Utf8 { column, array } => {
-                fill_nvarchar_column(*array, column, column_index, column_count, layout, bytes)
+                fill_string_column(*array, column, column_index, column_count, layout, bytes)
             }
             Self::LargeUtf8 { column, array } => {
-                fill_nvarchar_column(*array, column, column_index, column_count, layout, bytes)
+                fill_string_column(*array, column, column_index, column_count, layout, bytes)
             }
             Self::Utf8View { column, array } => {
-                fill_nvarchar_column(*array, column, column_index, column_count, layout, bytes)
+                fill_string_column(*array, column, column_index, column_count, layout, bytes)
             }
             Self::Binary { column, array } => {
                 fill_varbinary_column(*array, column, column_index, column_count, layout, bytes)
