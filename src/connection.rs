@@ -136,6 +136,26 @@ impl ConnectedMssqlClient {
         })
     }
 
+    /// Enables or disables SQL Server's persistent `table lock on bulk load`
+    /// option for a table.
+    ///
+    /// Enabling requires `ALTER` permission. Callers may ignore a known
+    /// nonfatal enable failure and continue without this optimization. Other
+    /// failures should be propagated.
+    ///
+    /// If enabling succeeds for a temporary load table, disabling must succeed
+    /// before the table is published. A disable failure should prevent
+    /// publication and trigger cleanup of the temporary table.
+    pub async fn set_bulk_load_table_lock(
+        &mut self,
+        table: &TableName,
+        enabled: bool,
+    ) -> Result<()> {
+        self.execute_statement(&bulk_load_table_lock_sql(table, enabled))
+            .await?;
+        Ok(())
+    }
+
     /// Starts a bulk writer on this same SQL Server connection.
     ///
     /// The returned writer borrows the connected client, so lifecycle SQL and
@@ -214,6 +234,15 @@ fn target_row_count_query(table: &TableName) -> String {
     )
 }
 
+fn bulk_load_table_lock_sql(table: &TableName, enabled: bool) -> String {
+    let value = if enabled { "ON" } else { "OFF" };
+
+    format!(
+        "EXEC sys.sp_tableoption {}, 'table lock on bulk load', '{value}';",
+        sql_string_literal(&table.quoted_sql())
+    )
+}
+
 fn count_big_i64_to_u64(count: i64) -> Result<u64> {
     u64::try_from(count).map_err(|_| Error::TargetRowCountUnexpectedResult {
         reason: "target row count was outside the supported range".to_owned(),
@@ -278,6 +307,21 @@ mod tests {
         assert_eq!(
             query,
             "SELECT COUNT_BIG(*) AS [row_count] FROM [tenant.schema].[people]]2026]"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn bulk_load_table_lock_sql_uses_quoted_table_name_and_requested_state() -> crate::Result<()> {
+        let table = crate::TableName::new("tenant's", "people's")?;
+
+        assert_eq!(
+            super::bulk_load_table_lock_sql(&table, true),
+            "EXEC sys.sp_tableoption N'[tenant''s].[people''s]', 'table lock on bulk load', 'ON';"
+        );
+        assert_eq!(
+            super::bulk_load_table_lock_sql(&table, false),
+            "EXEC sys.sp_tableoption N'[tenant''s].[people''s]', 'table lock on bulk load', 'OFF';"
         );
         Ok(())
     }
