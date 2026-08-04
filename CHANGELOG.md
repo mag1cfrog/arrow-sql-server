@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2](https://github.com/mag1cfrog/arrow-sql-server/compare/v0.3.1...v0.3.2) - 2026-08-04
+
+### Added
+
+- support optional table locking for SQL Server bulk loads
+
+### Other
+
+- optimize ASCII nvarchar encoding in the direct writer
+
 ## [0.3.1](https://github.com/mag1cfrog/arrow-sql-server/compare/v0.3.0...v0.3.1) - 2026-08-01
 
 ### Other
