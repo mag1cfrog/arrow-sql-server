@@ -11,7 +11,8 @@ use arrow_array::{ArrayRef, Int32Array, RecordBatch, TimestampMicrosecondArray};
 use arrow_schema::{DataType, Field, Schema, TimeUnit};
 use arrow_sql_server::{
     BulkWriter, CompatibilityLevel, MssqlProfile, MssqlVersion, PlanOptions, TableName,
-    TimestampPolicy, WriteBackend, WriteOptions, create_table_sql_from_mappings,
+    TimestampPolicy, WriteBackend, WriteOptions, connect_mssql_client_from_ado_string,
+    create_table_sql_from_mappings,
 };
 use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
@@ -24,6 +25,48 @@ static TABLE_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 type TestClient = tiberius::Client<Compat<TcpStream>>;
 type TestResult<T> = Result<T, Box<dyn std::error::Error>>;
+
+#[tokio::test]
+async fn bulk_load_table_lock_can_be_enabled_and_disabled() -> TestResult<()> {
+    let Some((connection_string, database)) = integration_config() else {
+        eprintln!(
+            "skipping SQL Server bulk-load table-lock compatibility probe: {CONNECTION_STRING_ENV} or {TEST_DATABASE_ENV} is not set"
+        );
+        return Ok(());
+    };
+
+    let connection_string = format!("{connection_string};database={database}");
+    let mut client = connect_mssql_client_from_ado_string(&connection_string).await?;
+    let table = unique_table_name()?;
+    client
+        .execute_statement(&format!(
+            "CREATE TABLE {} ([value] int NOT NULL)",
+            table.quoted_sql()
+        ))
+        .await?;
+
+    let result = async {
+        client.set_bulk_load_table_lock(&table, true).await?;
+        client
+            .execute_statement(&bulk_load_table_lock_assertion_sql(&table, true))
+            .await?;
+        client.set_bulk_load_table_lock(&table, false).await?;
+        client
+            .execute_statement(&bulk_load_table_lock_assertion_sql(&table, false))
+            .await?;
+
+        Ok::<(), Box<dyn std::error::Error>>(())
+    }
+    .await;
+
+    let drop_result = client
+        .execute_statement(&format!("DROP TABLE IF EXISTS {}", table.quoted_sql()))
+        .await;
+    result?;
+    drop_result?;
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn datetime_rounding_matches_sql_server_casts() -> TestResult<()> {
@@ -295,6 +338,15 @@ fn integration_config() -> Option<(String, String)> {
     let database = env::var(TEST_DATABASE_ENV).ok()?;
 
     Some((connection_string, database))
+}
+
+fn bulk_load_table_lock_assertion_sql(table: &TableName, expected: bool) -> String {
+    let expected = u8::from(expected);
+    let table = table.quoted_sql().replace('\'', "''");
+
+    format!(
+        "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE [object_id] = OBJECT_ID(N'{table}') AND [lock_on_bulk_load] = {expected}) RAISERROR('unexpected table lock on bulk load state', 16, 1);"
+    )
 }
 
 fn ensure_eq<T>(actual: T, expected: T, context: &str) -> TestResult<()>
