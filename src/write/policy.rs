@@ -33,6 +33,8 @@ pub enum StringPolicy {
     NVarCharMax,
     /// Use bounded `nvarchar(n)`.
     NVarChar(usize),
+    /// Use bounded `varchar(n)` and reject non-ASCII values.
+    AsciiVarChar(usize),
     /// Infer bounded `nvarchar(n)` from observed values.
     ObservedNVarChar,
 }
@@ -202,7 +204,7 @@ mod tests {
     #[test]
     fn supports_explicit_non_default_policy_overrides() {
         let options = PlanOptions {
-            string_policy: StringPolicy::NVarChar(128),
+            string_policy: StringPolicy::AsciiVarChar(128),
             binary_policy: BinaryPolicy::VarBinary(256),
             timezone_policy: TimezonePolicy::DateTimeOffset,
             timestamp_policy: TimestampPolicy::DateTime,
@@ -214,7 +216,7 @@ mod tests {
             date64_policy: Date64Policy::TimestampDateTime2,
         };
 
-        assert_eq!(options.string_policy, StringPolicy::NVarChar(128));
+        assert_eq!(options.string_policy, StringPolicy::AsciiVarChar(128));
         assert_eq!(options.binary_policy, BinaryPolicy::VarBinary(256));
         assert_eq!(options.timezone_policy, TimezonePolicy::DateTimeOffset);
         assert_eq!(options.timestamp_policy, TimestampPolicy::DateTime);

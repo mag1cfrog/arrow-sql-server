@@ -34,6 +34,8 @@ mod enabled {
         pub max_row_range_bytes: u64,
         /// Non-null SQL Server `nvarchar` payload bytes after UTF-16 encoding.
         pub nvarchar_utf16_bytes: u64,
+        /// Non-null SQL Server `varchar` payload bytes after ASCII validation.
+        pub varchar_bytes: u64,
         /// Non-null SQL Server `varbinary` payload bytes.
         pub varbinary_bytes: u64,
         /// Number of null cells observed by the profiled direct writer path.
@@ -297,6 +299,14 @@ mod enabled {
         });
     }
 
+    pub(crate) fn record_varchar_bytes(encoded_bytes: usize) {
+        with_profile(|profile| {
+            profile.varchar_bytes = profile
+                .varchar_bytes
+                .saturating_add(usize_to_u64_saturating(encoded_bytes));
+        });
+    }
+
     pub(crate) fn record_varbinary_bytes(encoded_bytes: usize) {
         with_profile(|profile| {
             profile.varbinary_bytes = profile
@@ -526,6 +536,8 @@ mod disabled {
 
     pub(crate) fn record_nvarchar_utf16_bytes(_encoded_bytes: usize) {}
 
+    pub(crate) fn record_varchar_bytes(_encoded_bytes: usize) {}
+
     pub(crate) fn record_varbinary_bytes(_encoded_bytes: usize) {}
 
     pub(crate) fn record_null_cell() {}
@@ -552,7 +564,7 @@ pub(crate) use enabled::{
     direct_date_fast_path_disabled, direct_fixed_width_fast_path_disabled, record_accepted_batch,
     record_append_encode, record_bulk_load_stats, record_measure_batch, record_null_cell,
     record_nvarchar_utf16_bytes, record_row_range, record_row_range_split, record_send_total,
-    record_varbinary_bytes,
+    record_varbinary_bytes, record_varchar_bytes,
 };
 
 pub(crate) fn record_elapsed<T>(start: std::time::Instant, record: fn(Duration), value: T) -> T {
@@ -574,6 +586,7 @@ mod tests {
         super::record_accepted_batch(7);
         super::record_row_range(11);
         super::record_nvarchar_utf16_bytes(17);
+        super::record_varchar_bytes(18);
         super::record_varbinary_bytes(19);
         super::record_null_cell();
         super::record_bulk_load_stats(tiberius::BulkLoadStats {
@@ -671,6 +684,7 @@ mod tests {
         assert_eq!(profile.encoded_bytes, 11);
         assert_eq!(profile.max_row_range_bytes, 11);
         assert_eq!(profile.nvarchar_utf16_bytes, 17);
+        assert_eq!(profile.varchar_bytes, 18);
         assert_eq!(profile.varbinary_bytes, 19);
         assert_eq!(profile.null_cells, 1);
         assert_eq!(profile.packet_write_calls, 23);

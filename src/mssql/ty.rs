@@ -70,6 +70,8 @@ pub enum MssqlType {
     },
     /// SQL Server `nvarchar(n|max)`.
     NVarChar(MssqlTypeLength),
+    /// SQL Server `varchar(n|max)` with ASCII-only Arrow string conversion.
+    VarChar(MssqlTypeLength),
     /// SQL Server `varbinary(n|max)`.
     VarBinary(MssqlTypeLength),
     /// SQL Server `binary(n)`.
@@ -111,6 +113,7 @@ impl MssqlType {
             Self::Real => "real".to_owned(),
             Self::Float { precision } => format!("float({precision})"),
             Self::NVarChar(length) => format!("nvarchar({})", length.render()),
+            Self::VarChar(length) => format!("varchar({})", length.render()),
             Self::VarBinary(length) => format!("varbinary({})", length.render()),
             Self::Binary(length) => format!("binary({length})"),
             Self::Decimal { precision, scale } => format!("decimal({precision},{scale})"),
@@ -147,6 +150,10 @@ mod tests {
         assert_eq!(
             MssqlType::NVarChar(MssqlTypeLength::Bounded(128)).to_sql(),
             "nvarchar(128)"
+        );
+        assert_eq!(
+            MssqlType::VarChar(MssqlTypeLength::Bounded(128)).to_sql(),
+            "varchar(128)"
         );
         assert_eq!(
             MssqlType::VarBinary(MssqlTypeLength::Max).to_sql(),

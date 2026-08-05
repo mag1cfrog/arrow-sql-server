@@ -30,7 +30,7 @@ use crate::{
         primitive::PrimitiveArrowToMssql,
         temporal::TemporalArrowToMssql,
         variable_width::{
-            VariableWidthArrowToMssql, is_binary_family_to_varbinary, is_string_family_to_nvarchar,
+            VariableWidthArrowToMssql, is_binary_family_to_varbinary, is_string_family_to_sql_text,
         },
     },
     write::context::RuntimeConversionContext,
@@ -248,7 +248,10 @@ fn bind_direct_columns<'a>(
             },
             DirectColumnEncoding::VariableWidth(VariableWidthArrowToMssql::StringToNVarChar {
                 ..
-            }) => bind_direct_nvarchar_array(
+            })
+            | DirectColumnEncoding::VariableWidth(
+                VariableWidthArrowToMssql::StringToAsciiVarChar { .. },
+            ) => bind_direct_string_array(
                 array,
                 column,
                 encoder.mapping_for_column_index(column_index)?,
@@ -385,15 +388,15 @@ fn bind_direct_columns<'a>(
     Ok(columns)
 }
 
-fn bind_direct_nvarchar_array<'a>(
+fn bind_direct_string_array<'a>(
     array: &'a dyn Array,
     column: &'a plan::DirectColumnPlan,
     mapping: &SchemaMapping,
 ) -> Result<BoundDirectColumn<'a>> {
-    if !is_string_family_to_nvarchar(mapping) {
+    if !is_string_family_to_sql_text(mapping) {
         return Err(unsupported_planned_direct_type(
             column,
-            "nvarchar",
+            "SQL text",
             mapping.arrow().data_type(),
         ));
     }
@@ -411,7 +414,7 @@ fn bind_direct_nvarchar_array<'a>(
             column,
             array: downcast_direct_array::<StringViewArray>(array, column)?,
         }),
-        other => Err(unsupported_planned_direct_type(column, "nvarchar", other)),
+        other => Err(unsupported_planned_direct_type(column, "SQL text", other)),
     }
 }
 

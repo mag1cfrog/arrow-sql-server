@@ -21,7 +21,7 @@ use super::super::types::{
         append_timestamp_nanosecond_cell, append_timestamp_second_cell,
     },
     uint64::append_uint64_decimal20_cell,
-    variable_width::{append_nvarchar_cell, append_varbinary_cell},
+    variable_width::{append_string_cell, append_varbinary_cell},
 };
 use super::BoundDirectColumn;
 
@@ -102,13 +102,13 @@ impl BoundDirectColumn<'_> {
                 append_float64_cell(buf, array, column, row_index, measured_len)
             }
             Self::Utf8 { column, array } => {
-                append_nvarchar_cell(buf, *array, column, row_index, measured_len)
+                append_string_cell(buf, *array, column, row_index, measured_len)
             }
             Self::LargeUtf8 { column, array } => {
-                append_nvarchar_cell(buf, *array, column, row_index, measured_len)
+                append_string_cell(buf, *array, column, row_index, measured_len)
             }
             Self::Utf8View { column, array } => {
-                append_nvarchar_cell(buf, *array, column, row_index, measured_len)
+                append_string_cell(buf, *array, column, row_index, measured_len)
             }
             Self::Binary { column, array } => {
                 append_varbinary_cell(buf, *array, column, row_index, measured_len)
@@ -286,13 +286,13 @@ impl BoundDirectColumn<'_> {
     ) -> Result<()> {
         match self {
             Self::Utf8 { column, array } => {
-                append_nvarchar_cell(buf, *array, column, row_index, measured_len)
+                append_string_cell(buf, *array, column, row_index, measured_len)
             }
             Self::LargeUtf8 { column, array } => {
-                append_nvarchar_cell(buf, *array, column, row_index, measured_len)
+                append_string_cell(buf, *array, column, row_index, measured_len)
             }
             Self::Utf8View { column, array } => {
-                append_nvarchar_cell(buf, *array, column, row_index, measured_len)
+                append_string_cell(buf, *array, column, row_index, measured_len)
             }
             Self::Binary { column, array } => {
                 append_varbinary_cell(buf, *array, column, row_index, measured_len)

@@ -34,6 +34,8 @@ pub(crate) enum MssqlCell<'a> {
     Float(Option<f64>),
     /// SQL Server `nvarchar` cell.
     NVarChar(Option<&'a str>),
+    /// SQL Server `varchar` cell containing only ASCII characters.
+    VarChar(Option<&'a str>),
     /// SQL Server `varbinary` cell.
     VarBinary(Option<&'a [u8]>),
 }

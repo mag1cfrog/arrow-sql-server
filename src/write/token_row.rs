@@ -49,6 +49,7 @@ pub(crate) fn mssql_cell_to_tiberius_borrowed(cell: MssqlCell<'_>) -> tiberius::
         MssqlCell::Real(value) => tiberius::ColumnData::F32(value),
         MssqlCell::Float(value) => tiberius::ColumnData::F64(value),
         MssqlCell::NVarChar(value) => tiberius::ColumnData::String(value.map(Cow::Borrowed)),
+        MssqlCell::VarChar(value) => tiberius::ColumnData::String(value.map(Cow::Borrowed)),
         MssqlCell::VarBinary(value) => tiberius::ColumnData::Binary(value.map(Cow::Borrowed)),
     }
 }
@@ -74,6 +75,9 @@ pub(crate) fn mssql_cell_to_tiberius_owned(cell: MssqlCell<'_>) -> tiberius::Col
         MssqlCell::Real(value) => tiberius::ColumnData::F32(value),
         MssqlCell::Float(value) => tiberius::ColumnData::F64(value),
         MssqlCell::NVarChar(value) => {
+            tiberius::ColumnData::String(value.map(|value| Cow::Owned(value.to_owned())))
+        }
+        MssqlCell::VarChar(value) => {
             tiberius::ColumnData::String(value.map(|value| Cow::Owned(value.to_owned())))
         }
         MssqlCell::VarBinary(value) => {
