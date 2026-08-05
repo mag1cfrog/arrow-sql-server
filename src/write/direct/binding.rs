@@ -396,7 +396,7 @@ fn bind_direct_string_array<'a>(
     if !is_string_family_to_sql_text(mapping) {
         return Err(unsupported_planned_direct_type(
             column,
-            "nvarchar",
+            "SQL text",
             mapping.arrow().data_type(),
         ));
     }
@@ -414,7 +414,7 @@ fn bind_direct_string_array<'a>(
             column,
             array: downcast_direct_array::<StringViewArray>(array, column)?,
         }),
-        other => Err(unsupported_planned_direct_type(column, "nvarchar", other)),
+        other => Err(unsupported_planned_direct_type(column, "SQL text", other)),
     }
 }
 

@@ -70,7 +70,7 @@ pub enum MssqlType {
     },
     /// SQL Server `nvarchar(n|max)`.
     NVarChar(MssqlTypeLength),
-    /// SQL Server `varchar(n|max)`.
+    /// SQL Server `varchar(n|max)` with ASCII-only Arrow string conversion.
     VarChar(MssqlTypeLength),
     /// SQL Server `varbinary(n|max)`.
     VarBinary(MssqlTypeLength),

@@ -591,7 +591,7 @@ fn append_bounded_payload_cell(
     let expected_len = bounded_cell_len(value.len())?;
     if measured_len != expected_len {
         return Err(invalid_payload(format!(
-            "measured bounded varbinary cell at row {row_index} column {} has length {}, expected {expected_len}",
+            "measured bounded byte-payload cell at row {row_index} column {} has length {}, expected {expected_len}",
             column.source_name(),
             measured_len
         )));
@@ -625,7 +625,7 @@ fn append_plp_payload_cell(
     let expected_len = plp_cell_len(value.len())?;
     if measured_len != expected_len {
         return Err(invalid_payload(format!(
-            "measured PLP varbinary cell at row {row_index} column {} has length {}, expected {expected_len}",
+            "measured PLP byte-payload cell at row {row_index} column {} has length {}, expected {expected_len}",
             column.source_name(),
             measured_len
         )));
@@ -892,7 +892,7 @@ fn write_bounded_payload_cell(bytes: &mut [u8], cell: &CellPosition, value: &[u8
     let expected_len = bounded_cell_len(value.len())?;
     if cell.len() != expected_len {
         return Err(invalid_payload(format!(
-            "bounded varbinary cell at row {} column {} has length {}, expected {expected_len}",
+            "bounded byte-payload cell at row {} column {} has length {}, expected {expected_len}",
             cell.row_index(),
             cell.column_index(),
             cell.len()
@@ -936,7 +936,7 @@ fn write_plp_payload_cell(bytes: &mut [u8], cell: &CellPosition, value: &[u8]) -
     let expected_len = plp_cell_len(value.len())?;
     if cell.len() != expected_len {
         return Err(invalid_payload(format!(
-            "PLP varbinary cell at row {} column {} has length {}, expected {expected_len}",
+            "PLP byte-payload cell at row {} column {} has length {}, expected {expected_len}",
             cell.row_index(),
             cell.column_index(),
             cell.len()

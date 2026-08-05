@@ -101,7 +101,7 @@ fn plan_arrow_string_as_mssql_type(
         {
             Ok(MssqlType::VarChar(MssqlTypeLength::Bounded(length)))
         }
-        StringPolicy::AsciiVarChar(length) => Err(string_length_out_of_range_for_arrow_to_mssql(
+        StringPolicy::AsciiVarChar(length) => Err(unsupported_arrow_mapping_for_arrow_to_mssql(
             index,
             field,
             format!(
@@ -140,7 +140,7 @@ fn plan_arrow_fixed_size_binary_as_mssql_type(
     field: &Field,
 ) -> std::result::Result<MssqlType, Diagnostic> {
     let Ok(length) = usize::try_from(length) else {
-        return Err(fixed_size_binary_out_of_range_for_arrow_to_mssql(
+        return Err(unsupported_arrow_mapping_for_arrow_to_mssql(
             index,
             field,
             "fixed-size binary length must be non-negative",
@@ -148,7 +148,7 @@ fn plan_arrow_fixed_size_binary_as_mssql_type(
     };
 
     if !(1..=SQL_SERVER_MAX_BINARY_LEN).contains(&length) {
-        return Err(fixed_size_binary_out_of_range_for_arrow_to_mssql(
+        return Err(unsupported_arrow_mapping_for_arrow_to_mssql(
             index,
             field,
             format!(
@@ -342,16 +342,7 @@ fn decimal_out_of_range_for_arrow_to_mssql(
         .with_field(FieldRef::new(index, field.name()))
 }
 
-fn fixed_size_binary_out_of_range_for_arrow_to_mssql(
-    index: usize,
-    field: &Field,
-    message: impl Into<String>,
-) -> Diagnostic {
-    Diagnostic::error(DiagnosticCode::UnsupportedArrowType, message)
-        .with_field(FieldRef::new(index, field.name()))
-}
-
-fn string_length_out_of_range_for_arrow_to_mssql(
+fn unsupported_arrow_mapping_for_arrow_to_mssql(
     index: usize,
     field: &Field,
     message: impl Into<String>,
