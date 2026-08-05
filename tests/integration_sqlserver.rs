@@ -1197,7 +1197,11 @@ async fn writers_round_trip_ascii_varchar_across_supported_backends() -> TestRes
         ],
     )?;
 
-    for backend in [WriteBackend::BaselineTokenRow, WriteBackend::DirectRawBulk] {
+    for backend in [
+        WriteBackend::BaselineTokenRow,
+        WriteBackend::DirectFramedBulk,
+        WriteBackend::DirectRawBulk,
+    ] {
         let table = unique_table_name()?;
         execute_sql(
             &mut client,
